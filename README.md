@@ -37,45 +37,46 @@ O foco desse sistema é tirar o peso da burocracia das costas do RH e automatiza
 * **Histórico de Ausências:** Dá para conferir os atestados que já foram entregues e ver quando serão as próximas férias programadas pelo RH.
 * **Perfil Próprio:** Uma área para conferir seus dados de contrato e trocar a própria foto de perfil para manter a conta atualizada.
 
-## Como rodar o projeto
+## Instalação e Configuração
 
-Você vai precisar do **PHP 8.3+**, **Composer**, **Node.js** e do **MySQL** rodando na sua máquina.
+Para executar o sistema em seu ambiente (Windows, Linux ou macOS), é necessário ter instalado o **PHP 8.3**, **Composer**, **Node.js** e um servidor de banco de dados **MySQL**.
 
-1. Clone o repositório:
+### 1. Clone do Repositório
+Realize o clone do projeto e acesse o diretório:
 ```bash
 git clone https://github.com/vini581/sistema-rh.git
 cd sistema-rh
 ```
 
-2. Instale as dependências do PHP e do Node:
+### 2. Instalação de Dependências
+Instale as dependências do backend (Composer) e do frontend (NPM):
 ```bash
 composer install
 npm install
 ```
 
-3. Crie o `.env` e gere a chave do Laravel:
+### 3. Configuração de Ambiente
+Crie o arquivo de configuração `.env` a partir do modelo e gere a chave única da aplicação:
 ```bash
 cp .env.example .env
 php artisan key:generate
 ```
-*Não se esqueça de colocar os dados do seu banco de dados no `.env`.*
+> **Nota:** Após criar o arquivo, configure as credenciais de acesso ao seu banco de dados no arquivo `.env`.
 
-4. Rode as migrations com os dados de teste e crie o link dos arquivos:
+### 4. Banco de Dados e Storage
+Execute as migrations para criar as tabelas (com dados iniciais de teste) e configure o link simbólico para os arquivos de upload:
 ```bash
 php artisan migrate --seed
 php artisan storage:link
 ```
 
-5. Suba a aplicação:
-```bash
-php artisan serve
-```
-E em outro terminal, rode o Vite para compilar o CSS/JS:
-```bash
-npm run dev
-```
+### 5. Execução da Aplicação
+Inicie o servidor de desenvolvimento do Laravel e o compilador do Vite em terminais separados:
 
-Pronto, o sistema vai estar rodando em `http://localhost:8000`.
+*   **Servidor Backend:** `php artisan serve`
+*   **Servidor Frontend:** `npm run dev`
+
+Após iniciar os serviços, o sistema estará acessível em `http://localhost:8000`.
 
 ## Estrutura do Código
 
