@@ -43,7 +43,7 @@ Você vai precisar do **PHP 8.3+**, **Composer**, **Node.js** e do **MySQL** rod
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/usuario/sistema-rh.git
+git clone https://github.com/vini581/sistema-rh.git
 cd sistema-rh
 ```
 
