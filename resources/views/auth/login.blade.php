@@ -29,7 +29,7 @@
     <div class="login-box">
 
         <div style="text-align:center; margin-bottom:32px;">
-            <img src="{{ asset('images/logo.png') }}" alt="Smart Telecom" style="height:80px; display:block; margin:0 auto;">
+            <img src="{{ asset('images/logo.png') }}" alt="Smart Telecom" style="height:160px; display:block; margin:0 auto;">
             <p style="color:#64748b; font-size:13px; margin-top:8px; letter-spacing:1px; text-transform:uppercase;">Sistema de Gestão de RH</p>
         </div>
 

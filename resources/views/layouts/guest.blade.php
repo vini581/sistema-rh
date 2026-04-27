@@ -13,6 +13,14 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        <script>
+            (function() {
+                var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (tz && document.cookie.indexOf('client_timezone=' + tz) === -1) {
+                    document.cookie = 'client_timezone=' + tz + ';path=/;max-age=31536000;SameSite=Lax';
+                }
+            })();
+        </script>
     </head>
     <body class="font-sans text-gray-900 antialiased">
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">

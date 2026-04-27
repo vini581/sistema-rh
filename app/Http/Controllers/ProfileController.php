@@ -26,13 +26,21 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $user->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($request->hasFile('avatar')) {
+            if ($user->avatar) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+            }
+            $user->avatar = $request->file('avatar')->store('avatars', 'public');
         }
 
-        $request->user()->save();
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+
+        $user->save();
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
@@ -48,9 +56,24 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        Auth::logout();
+        \Illuminate\Support\Facades\Auth::logout();
 
-        $user->delete();
+        \Illuminate\Support\Facades\DB::transaction(function () use ($user) {
+            // Se o usuário for um funcionário, apagar os atestados dele
+            if ($user->employee) {
+                $certificates = \App\Models\MedicalCertificate::where('employee_id', $user->employee->id)->whereNotNull('file_path')->get();
+                foreach ($certificates as $cert) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($cert->file_path);
+                }
+            }
+
+            // Remover avatar
+            if ($user->avatar) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+            }
+
+            $user->delete();
+        });
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

@@ -48,14 +48,23 @@ class WorkLog extends Model
     {
         if (!$this->clock_out || !$this->clock_in) return 0;
 
-        $total = $this->clock_out->diffInMinutes($this->clock_in);
-        
+        $start = $this->clock_in;
+        $end   = $this->clock_out;
+
+        if ($start->gt($end)) return 0;
+
+        $total = $start->diffInMinutes($end);
+
         if ($this->lunch_out && $this->lunch_in) {
-            $lunch = $this->lunch_in->diffInMinutes($this->lunch_out);
-            $total -= $lunch;
+            $lStart = $this->lunch_out;
+            $lEnd   = $this->lunch_in;
+            
+            if ($lEnd->gt($lStart) && $lStart->gt($start) && $lEnd->lt($end)) {
+                $total -= $lStart->diffInMinutes($lEnd);
+            }
         }
 
-        return $total;
+        return (int) max(0, $total);
     }
 
     public function getFormattedHoursAttribute(): string
@@ -64,5 +73,10 @@ class WorkLog extends Model
         $h = intdiv($minutes, 60);
         $m = $minutes % 60;
         return sprintf('%02d:%02d', $h, $m);
+    }
+
+    public function hourBank()
+    {
+        return $this->hasOne(HourBank::class);
     }
 }
