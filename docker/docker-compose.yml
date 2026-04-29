@@ -1,0 +1,43 @@
+services:
+  app:
+    build: ..
+    container_name: sistema_rh_app
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - storage_avatars:/var/www/storage/app/public/avatars
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sistema_rh
+
+  db:
+    image: mysql:8.0
+    container_name: sistema_rh_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: sistema_rh
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: rootsecret
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ularavel", "-psecret"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    networks:
+      - sistema_rh
+
+volumes:
+  db_data:
+  storage_avatars:
+
+networks:
+  sistema_rh:
+    driver: bridge
