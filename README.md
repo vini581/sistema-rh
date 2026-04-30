@@ -41,6 +41,42 @@ O foco desse sistema é tirar o peso da burocracia das costas do RH e automatiza
 
 ---
 
+## Como usar o sistema
+
+### Passo a passo para o Gestor (RH / Admin)
+
+Ao acessar o sistema com a conta de administrador, o gestor é direcionado ao **Dashboard Gerencial**, que apresenta um resumo das informações do mês — funcionários ativos, folhas processadas e ocorrências pendentes. A partir dali, o fluxo de trabalho segue esta ordem:
+
+**1. Cadastrar e configurar funcionários:** Acesse o menu **Funcionários** e clique em "Novo Funcionário". Preencha os dados pessoais (nome, e-mail, CPF, data de admissão), defina o salário base e faça o upload da foto de perfil, caso queira — se nenhuma foto for enviada, o sistema gera automaticamente um avatar com as iniciais do nome. Com o funcionário criado, acesse a aba **Jornada** dentro do perfil dele para definir a carga horária semanal (dias e horários de entrada/saída). Em seguida, acesse a aba **Configurações Financeiras** para registrar verbas e descontos individuais, como benefícios, adiantamentos ou descontos contratuais específicos; cada configuração recebe uma data de início para que o histórico financeiro do colaborador nunca seja sobrescrito.
+
+**2. Configurar os parâmetros do RH:** No menu **Configurações RH**, cadastre e mantenha atualizadas as regras tributárias e trabalhistas que se aplicam a toda a empresa — tabelas de INSS, alíquotas de FGTS, percentual de DSR, percentual de hora extra e outros parâmetros. Cada registro é salvo com uma data de vigência, o que garante que, se uma alíquota mudar no meio do ano, os fechamentos de meses anteriores continuem calculados com os valores que vigoravam naquele período (versionamento com viagem no tempo).
+
+**3. Lançar feriados:** Acesse o menu **Feriados** e cadastre as datas não úteis do calendário — nacionais, estaduais ou municipais. O motor de cálculo da folha usa esses registros para distinguir dias trabalhados normais de dias que geram pagamento em dobro ou DSR.
+
+**4. Gerenciar atestados médicos:** Vá em **Atestados** para ver todos os atestados enviados pelos funcionários. O gestor pode aprovar ou reprovar cada um; o sistema valida automaticamente se o período do atestado conflita com férias já agendadas do colaborador, impedindo lançamentos inconsistentes. Atestados aprovados são descontados da folha como faltas justificadas, sem impactar o DSR.
+
+**5. Processar a folha de pagamento:** Acesse o menu **Folha de Pagamento** e selecione o mês de referência. Clique em **Calcular** — o sistema cruza o salário base de cada funcionário com as horas extras registradas, aplica os descontos de INSS, FGTS e outras verbas configuradas, e gera o holerite individual de cada colaborador. Antes de fechar, é possível revisar e editar os valores calculados de qualquer funcionário. Quando tudo estiver conferido, clique em **Fechar Folha**: o sistema usa bloqueios (*locks*) no banco de dados para garantir que nenhuma outra sessão possa processar o mesmo período ao mesmo tempo, evitando duplicações ou falhas. Após o fechamento, a folha fica imutável e visível para cada funcionário no próprio painel deles.
+
+**6. Consultar relatórios:** Na seção **Relatórios**, o gestor tem uma visão consolidada dos dados — custos totais de folha por mês, histórico de ausências da equipe e demais informações gerenciais para apoiar a tomada de decisão.
+
+---
+
+### Passo a passo para o Funcionário
+
+O funcionário acessa o sistema com o e-mail e a senha cadastrados pelo RH e é direcionado ao seu **Painel Pessoal**, onde vê um resumo do próprio mês: últimas batidas de ponto, saldo de horas e status das solicitações pendentes. A partir dali, pode fazer tudo isso:
+
+**1. Registrar ponto:** No menu **Ponto**, o funcionário encontra o botão de **Bater Ponto** para registrar entrada, saída e intervalos. O sistema guarda o horário exato de cada registro e disponibiliza o **Histórico de Ponto**, onde é possível consultar todos os lançamentos do mês com os totais de horas trabalhadas, horas extras acumuladas e eventuais divergências.
+
+**2. Consultar holerites:** Em **Meus Holerites**, o funcionário vê a lista de todos os contracheques já fechados pelo RH. Ao clicar em qualquer mês, o holerite é exibido de forma detalhada — com discriminação de cada verba (salário base, horas extras, DSR, bônus) e cada desconto (INSS, FGTS, adiantamentos), tornando completamente transparente como o valor líquido foi calculado.
+
+**3. Solicitar e acompanhar férias:** No menu **Minhas Férias**, o funcionário pode solicitar o período de férias desejado informando a data de início e o número de dias. A solicitação fica registrada e visível para o RH aprovar ou ajustar. Também é possível consultar o histórico de férias já tiradas e o saldo de dias disponíveis.
+
+**4. Enviar atestados médicos:** Em **Meus Atestados**, o funcionário pode registrar um atestado médico informando o período de afastamento e fazendo o upload do documento digitalizado. O atestado fica com status "Pendente" até que o gestor o aprove ou reprove. O histórico de todos os atestados enviados fica disponível nessa mesma tela, com o status atualizado de cada um.
+
+**5. Gerenciar o perfil:** No canto superior da tela, ao clicar no avatar ou nome, o funcionário acessa a área de **Perfil**, onde pode visualizar seus dados contratuais (cargo, data de admissão, carga horária) e atualizar sua foto de perfil para personalizar a conta.
+
+---
+
 ## Instalação e Configuração
 
 O projeto usa **Docker**, o que significa que você não precisa instalar PHP, MySQL ou Node.js na sua máquina. O único requisito é o Docker.
