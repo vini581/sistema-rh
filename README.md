@@ -78,87 +78,139 @@ O funcionário acessa o sistema com o e-mail e a senha cadastrados pelo RH e é 
 ---
 
 ## Instalação e Configuração
-
-O projeto usa **Docker**, o que significa que você não precisa instalar PHP, MySQL ou Node.js na sua máquina. O único requisito é o Docker.
-
-### Pré-requisito: Docker
-
-| Sistema | Instalação |
-|---|---|
-| Windows / macOS | Baixe em [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/) e instale normalmente |
-| Ubuntu / Debian | `sudo apt install docker.io docker-compose-plugin -y` |
-| Fedora / RHEL | `sudo dnf install docker docker-compose-plugin -y` |
-
-> **Windows:** após instalar o Docker Desktop, ative o WSL 2 quando solicitado e reinicie o computador.
-
+ 
+O jeito mais fácil de rodar o projeto é com Docker — ele já cuida de tudo: PHP, MySQL, Nginx, dependências e banco de dados. Você não precisa instalar nada além do próprio Docker na sua máquina.
+ 
+Se preferir rodar sem Docker, tem uma seção no final explicando como fazer isso também.
+ 
 ---
-
-### 1. Clone do Repositório
-
+ 
+### Instalação com Docker
+ 
+#### Passo 1 — Instale o Docker
+ 
+Dependendo do seu sistema operacional, o processo é diferente:
+ 
+**Windows**
+ 
+Baixe o Docker Desktop em [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/) e instale normalmente como qualquer programa. Durante a instalação, ele vai pedir pra ativar o WSL 2 — pode aceitar. Depois de instalar, reinicie o computador antes de continuar.
+ 
+**macOS**
+ 
+Baixe o Docker Desktop no mesmo link acima e arraste pro Applications como de costume. Depois de abrir o Docker Desktop pela primeira vez, espera o ícone na barra superior parar de girar — isso significa que o Docker tá rodando e pronto pra uso.
+ 
+**Ubuntu / Debian**
+ 
+```bash
+sudo apt update
+sudo apt install docker.io docker-compose-plugin -y
+sudo systemctl enable --now docker
+```
+ 
+Depois adicione seu usuário ao grupo do Docker pra não precisar de `sudo` toda vez:
+ 
+```bash
+sudo usermod -aG docker $USER
+```
+ 
+Saia e entre de volta na sessão (ou rode `newgrp docker`) pra a mudança ter efeito.
+ 
+**Fedora / RHEL / CentOS**
+ 
+```bash
+sudo dnf install docker docker-compose-plugin -y
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+```
+ 
+Saia e entre de volta na sessão depois.
+ 
+**Arch Linux / Manjaro**
+ 
+```bash
+sudo pacman -S docker docker-compose
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+```
+ 
+> Pra confirmar que o Docker foi instalado corretamente, rode `docker --version` no terminal. Se aparecer a versão, tá tudo certo.
+ 
+---
+ 
+#### Passo 2 — Clone o repositório
+ 
+Você vai precisar do Git instalado pra isso. Se não tiver, instale com `sudo apt install git` (Linux) ou baixe em [git-scm.com](https://git-scm.com/) (Windows/macOS).
+ 
 ```bash
 git clone https://github.com/vini581/sistema-rh.git
 cd sistema-rh
 ```
-
-### 2. Suba o projeto
-
-Abra o terminal dentro da pasta `docker/` e execute:
-
+ 
+---
+ 
+#### Passo 3 — Suba o projeto
+ 
+Dentro da pasta `docker/`, rode:
+ 
 ```bash
 docker compose up --build
 ```
-
-Na primeira vez o processo leva entre 3 e 10 minutos — o Docker vai baixar as imagens, instalar as dependências PHP e Node.js, compilar os assets e rodar as migrations automaticamente.
-
-Quando aparecer a mensagem abaixo no terminal, o sistema está pronto:
-
+ 
+Na primeira vez isso pode demorar entre 3 e 10 minutos dependendo da sua internet e da sua máquina. O Docker vai baixar as imagens base, instalar as dependências PHP via Composer, instalar as dependências Node.js, compilar os assets com Vite e em seguida o entrypoint vai gerar a APP_KEY, rodar todas as migrations e popular o banco com o seeder automaticamente. Você não precisa fazer nada disso na mão.
+ 
+Quando o processo terminar, vai aparecer no terminal:
+ 
 ```
 ✅ Sistema pronto em http://localhost:8000
    📧 admin@gmail.com  |  🔑 654321
 ```
-
-### 3. Acesse o sistema
-
+ 
+Se essa mensagem aparecer, o sistema está no ar.
+ 
+---
+ 
+#### Passo 4 — Acesse o sistema
+ 
 Abra o navegador e acesse **http://localhost:8000**.
-
-Faça login com as credenciais do administrador criadas automaticamente pelo seeder:
-
+ 
+Use as credenciais abaixo pra entrar como administrador:
+ 
 | Campo | Valor |
 |---|---|
 | E-mail | `admin@gmail.com` |
 | Senha | `654321` |
-
+ 
 ---
-
+ 
 ### Comandos úteis
-
+ 
 ```bash
-# Subir em segundo plano (sem travar o terminal)
+# Subir em segundo plano (sem deixar o terminal preso)
 docker compose up --build -d
-
-# Ver logs em tempo real
+ 
+# Acompanhar os logs em tempo real
 docker compose logs -f
-
-# Parar os containers
+ 
+# Parar os containers sem apagar nada
 docker compose down
-
-# Reset completo (apaga e recria o banco de dados)
+ 
+# Reset completo — apaga o banco e recria tudo do zero
 docker compose down -v && docker compose up --build
-
-# Acessar o terminal do container
+ 
+# Abrir um terminal dentro do container da aplicação
 docker compose exec app bash
-
-# Rodar comandos artisan
+ 
+# Rodar comandos Artisan de dentro do container
 docker compose exec app php artisan migrate:fresh --seed
 docker compose exec app php artisan tinker
 ```
-
+ 
 ---
-
-### Acessar o banco de dados
-
-Conecte com qualquer cliente MySQL (TablePlus, DBeaver, MySQL Workbench):
-
+ 
+### Acessar o banco de dados diretamente
+ 
+Se quiser inspecionar o banco com um cliente externo como TablePlus, DBeaver ou MySQL Workbench, use as credenciais abaixo. O container expõe o MySQL na porta padrão da sua máquina:
+ 
 | Campo | Valor |
 |---|---|
 | Host | `127.0.0.1` |
@@ -166,37 +218,81 @@ Conecte com qualquer cliente MySQL (TablePlus, DBeaver, MySQL Workbench):
 | Banco | `sistema_rh` |
 | Usuário | `laravel` |
 | Senha | `secret` |
-
+ 
 ---
-
+ 
 ### Instalação manual (sem Docker)
-
-Se preferir rodar sem Docker, é necessário ter **PHP 8.3**, **Composer**, **Node.js 20** e **MySQL 8** instalados na máquina. Consulte o arquivo [REQUIREMENTS.md](REQUIREMENTS.md) para a lista completa de extensões e dependências necessárias.
-
+ 
+Se por algum motivo você não quiser usar Docker, dá pra rodar o projeto diretamente na sua máquina. Você vai precisar instalar manualmente:
+ 
+- **PHP 8.3** com as extensões: `pdo_mysql`, `mbstring`, `exif`, `pcntl`, `bcmath`, `gd`, `zip`
+- **Composer** (gerenciador de dependências PHP)
+- **Node.js 20** e **npm**
+- **MySQL 8**
+Com tudo instalado, siga os passos:
+ 
+**1. Instale as dependências**
+ 
 ```bash
 composer install
 npm install
+```
+ 
+**2. Configure o ambiente**
+ 
+```bash
 cp .env.example .env
-# Configure as credenciais do banco no .env
+```
+ 
+Abra o arquivo `.env` e preencha as credenciais do banco de dados:
+ 
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=sistema_rh
+DB_USERNAME=seu_usuario
+DB_PASSWORD=sua_senha
+```
+ 
+Crie o banco `sistema_rh` no MySQL antes de continuar (pode fazer pelo terminal ou por um cliente como o DBeaver):
+ 
+```sql
+CREATE DATABASE sistema_rh CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+ 
+**3. Gere a chave da aplicação e prepare o banco**
+ 
+```bash
 php artisan key:generate
 php artisan migrate --seed
 php artisan storage:link
-php artisan serve    # terminal 1
-npm run dev          # terminal 2
 ```
-
+ 
+**4. Suba os servidores**
+ 
+Você vai precisar de dois terminais abertos ao mesmo tempo:
+ 
+```bash
+# Terminal 1 — servidor PHP
+php artisan serve
+ 
+# Terminal 2 — compilação dos assets em tempo real
+npm run dev
+```
+ 
+Depois acesse **http://localhost:8000** no navegador.
+ 
 ---
-
+ 
 ## Estrutura do Código
-
+ 
 Para quem quiser dar uma olhada no código, a estrutura segue o padrão do Laravel, mas vale destacar:
-
+ 
 - `/app/Models`: Onde ficam os modelos e a lógica de *Casts* (onde convertemos os centavos do banco para reais na tela).
 - `/app/Services`: Extraímos algumas regras de negócio mais complexas dos Controllers para cá.
 - `/database/migrations`: Todas as regras de relacionamento e constraints estão bem definidas aqui.
 - `/docker`: Arquivos de configuração do Nginx e entrypoint do container.
-
----
 
 ## Próximos Passos (Roadmap)
 
