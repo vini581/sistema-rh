@@ -22,9 +22,9 @@ class PayrollCalculator
      *       + (Dias de atestado abonados × Valor Dia)
      * Líquido = Bruto − Descontos manuais
      */
-    public function calculate(Employee $employee, int $year, int $month, bool $persist = true): Payroll
+    public function calculate(Employee $employee, int $year, int $month, bool $persist = true, string $type = 'monthly'): Payroll
     {
-        $logic = function () use ($employee, $year, $month, $persist) {
+        $logic = function () use ($employee, $year, $month, $persist, $type) {
             try {
                 if ($persist) {
                     $employee = Employee::where('id', $employee->id)->lockForUpdate()->first();
@@ -55,16 +55,120 @@ class PayrollCalculator
                 $expectedMinutes = $monthlyHours * 60;
                 $expectedPerDay  = $workingDays > 0 ? ($expectedMinutes / $workingDays) : 0;
 
-                // Separa horas normais vs extras
-                $normalMinutes   = min($totalMinutes, $expectedMinutes);
-                $rawExtraMinutes = max(0, $totalMinutes - $expectedMinutes);
+                $isMonthly = ($paymentType === 'monthly');
 
-                // Tolerância: só conta HE se exceder o mínimo configurado
-                $extraMinutes = $rawExtraMinutes >= $minMinutes ? $rawExtraMinutes : 0;
+                $overtimeWkPct  = (int) ($config->overtime_weekday_pct ?? 50);
+                $overtimeSatPct = (int) ($config->overtime_saturday_pct ?? 50);
+                $overtimeSunPct = (int) ($config->overtime_sunday_pct ?? 100);
+                $overtimeHolPct = (int) ($config->overtime_holiday_pct ?? 100);
+                $saturdayIsOvertime = (bool) ($config->saturday_is_overtime ?? true);
 
-                // Cálculo base em centavos
-                $normalCents = (int) round(($normalMinutes / 60) * $hourlyRate);
-                $overtimeCents = (int) round(($extraMinutes / 60) * $hourlyRate * (1 + $overtimeWkPct / 100));
+                if ($type === 'advance') {
+                    $advancePct = (int) ($config->biweekly_first_pct ?? 40);
+                    $grossTotalCents = (int) round($expectedMinutes / 60 * $hourlyRate * ($advancePct / 100));
+                    
+                    $data = [
+                        'worked_hours' => 0,
+                        'gross_total'  => $grossTotalCents,
+                        'status'       => $persist ? 'calculated' : 'draft',
+                    ];
+                    $totalDeductions = 0;
+                    $deductionNotes = null;
+                    $periodType = 'advance';
+                    $normalMinutes = 0;
+                    $nightMinutes = 0;
+                } else {
+                    $startOfMonth = $referenceMonth->copy();
+                    $endOfMonth   = $referenceMonth->copy()->endOfMonth();
+
+                $normalMinutes = 0;
+                $overtimeCents = 0;
+                $totalAbsenceCents = 0;
+                $dsrCents = 0;
+                $normalWorkedMinutesForDSR = 0;
+                $nonWorkingDays = 0;
+
+                $vacations = \App\Models\VacationRequest::where('employee_id', $employee->id)
+                    ->where('status', 'approved')->get();
+
+                $certificates = MedicalCertificate::where('employee_id', $employee->id)
+                    ->where('status', 'approved')->where('excused', true)->get();
+
+                for ($date = clone $startOfMonth; $date->lte($endOfMonth); $date->addDay()) {
+                    $isWorkingDay = CalendarService::isWorkingDay($date, $employee->id);
+                    $isHoliday = \App\Models\Holiday::isHoliday($date);
+
+                    if (!$isWorkingDay) {
+                        $nonWorkingDays++;
+                    }
+
+                    $log = $logs->first(function($l) use ($date) {
+                        return $l->work_date->isSameDay($date);
+                    });
+                    $worked = $log ? (int) $log->total_minutes : 0;
+
+                    if (!$isWorkingDay) {
+                        // Dia não útil: todo o trabalho é hora extra com taxa especial
+                        if ($worked > 0) {
+                            $pct = $overtimeWkPct;
+                            if ($isHoliday) {
+                                $pct = $overtimeHolPct;
+                            } elseif ($date->isSunday()) {
+                                $pct = $overtimeSunPct;
+                            } elseif ($date->isSaturday() && $saturdayIsOvertime) {
+                                $pct = $overtimeSatPct;
+                            }
+                            
+                            $overtimeCents += (int) round(($worked / 60) * $hourlyRate * (1 + $pct / 100));
+                            $normalWorkedMinutesForDSR += $worked;
+                        }
+                    } else {
+                        // Dia útil: separa o que é normal do que é extra
+                        $schedule = $employee->workSchedule;
+                        $dailyExpected = $schedule ? (int)($schedule->work_hours_per_day * 60) : (int)$expectedPerDay;
+                        
+                        $hasVacation = $vacations->contains(function ($v) use ($date) {
+                            $vStart = \Carbon\Carbon::parse($v->start_date);
+                            $vEnd = $vStart->copy()->addDays($v->days - 1);
+                            return $date->between($vStart, $vEnd);
+                        });
+
+                        $hasCertificate = $certificates->contains(function ($c) use ($date) {
+                            $cStart = \Carbon\Carbon::parse($c->start_date);
+                            $cEnd = \Carbon\Carbon::parse($c->end_date);
+                            return $date->between($cStart, $cEnd);
+                        });
+
+                        if ($hasVacation || $hasCertificate) {
+                            // Férias e atestados contam como dia trabalhado cheio
+                            $normalMinutes += $dailyExpected;
+                            $normalWorkedMinutesForDSR += $dailyExpected;
+                        } else {
+                            if ($worked > $dailyExpected) {
+                                $normalMinutes += $dailyExpected;
+                                $normalWorkedMinutesForDSR += $dailyExpected;
+                                $extraToday = $worked - $dailyExpected;
+                                
+                                if ($extraToday >= $minMinutes) {
+                                    $overtimeCents += (int) round(($extraToday / 60) * $hourlyRate * (1 + $overtimeWkPct / 100));
+                                    $normalWorkedMinutesForDSR += $extraToday;
+                                }
+                            } else {
+                                $normalMinutes += $worked;
+                                $normalWorkedMinutesForDSR += $worked;
+                                // Faltou horas ou dia todo
+                                $missingToday = $dailyExpected - $worked;
+                                if ($missingToday > 0) {
+                                    $totalAbsenceCents += (int) round(($missingToday / 60) * $hourlyRate);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if ($workingDays > 0) {
+                    $dsrCents = (int) round(($normalWorkedMinutesForDSR / 60 / $workingDays) * $nonWorkingDays * $hourlyRate);
+                }
 
                 // Adicional noturno (22h-5h): estimativa baseada nos logs
                 $nightMinutes = $this->calculateNightMinutes($logs);
@@ -72,36 +176,55 @@ class PayrollCalculator
                     ? (int) round(($nightMinutes / 60) * $hourlyRate * ($nightPct / 100))
                     : 0;
 
-                // Atestados aprovados contam como trabalhados?
-                $certificateCents = 0;
-                if ($config->certificate_counts_as_worked) {
-                    $certDays = MedicalCertificate::where('employee_id', $employee->id)
-                        ->where('status', 'approved')
-                        ->where('excused', true)
-                        ->whereMonth('start_date', $month)
-                        ->whereYear('start_date', $year)
-                        ->sum('days');
-                    $certificateCents = (int) round($certDays * $expectedPerDay / 60 * $hourlyRate);
+                if ($isMonthly) {
+                    $normalCents = (int) round($monthlyHours * $hourlyRate);
+                    // DSR sobre horas extras
+                    $dsrCents = $workingDays > 0 ? (int) round(($overtimeCents / $workingDays) * $nonWorkingDays) : 0;
+                } else {
+                    $normalCents = (int) round(($normalMinutes / 60) * $hourlyRate);
+                    // DSR sobre horas normais e extras
+                    $dsrCents = $workingDays > 0 ? (int) round((($normalCents + $overtimeCents) / $workingDays) * $nonWorkingDays) : 0;
                 }
 
-                $grossTotalCents = $normalCents + $overtimeCents + $nightCents + $certificateCents;
+                $grossTotalCents = $normalCents + $overtimeCents + $nightCents + $dsrCents;
+
+                // Checa se já teve adiantamento fechado no mês
+                $advancePaid = Payroll::where('employee_id', $employee->id)
+                    ->where('reference_month', $referenceMonth->format('Y-m-d'))
+                    ->where('period_type', 'advance')
+                    ->whereIn('status', ['closed', 'paid'])
+                    ->first();
+                $advanceDeduction = $advancePaid ? $advancePaid->net_total : 0;
 
                 $data = [
-                    'worked_hours' => $totalMinutes,
+                    'worked_hours' => $normalMinutes + $nightMinutes, // horas base (normal + noturno)
                     'gross_total'  => $grossTotalCents,
                     'status'       => $persist ? 'calculated' : 'draft',
                 ];
+
+                // Aplica dedução fixa configurada manualmente (Imposto Fixo)
+                $fixedDiscountPct = (int) ($config->fixed_discount_pct ?? 0);
+                $fixedDiscountCents = (int) round($grossTotalCents * ($fixedDiscountPct / 100));
+                
+                $totalDeductions = $totalAbsenceCents + $fixedDiscountCents + $advanceDeduction;
+                $deductionNotes = "Faltas: R$ " . number_format($totalAbsenceCents/100, 2, ',', '.') . ($fixedDiscountCents > 0 ? " | Impostos: R$ " . number_format($fixedDiscountCents/100, 2, ',', '.') : "");
+                if ($advanceDeduction > 0) {
+                    $deductionNotes .= " | Adiantamento: R$ " . number_format($advanceDeduction/100, 2, ',', '.');
+                }
+                
+                $periodType = $paymentType === 'biweekly' ? 'biweekly' : 'monthly';
+                
+                } // End of else ($type === 'monthly')
 
                 if (!$persist) {
                     $payroll = new Payroll($data);
                     $payroll->employee_id = $employee->id;
                     $payroll->reference_month = $referenceMonth->format('Y-m-d');
-                    $payroll->deductions = 0;
-                    $payroll->net_total = $grossTotalCents;
+                    $payroll->deductions = $totalDeductions;
+                    $payroll->deduction_notes = $deductionNotes;
+                    $payroll->net_total = $grossTotalCents - $totalDeductions;
                     return $payroll;
                 }
-
-                $periodType = $paymentType === 'biweekly' ? 'biweekly' : 'monthly';
 
                 $payroll = Payroll::firstOrCreate(
                     [
@@ -109,7 +232,11 @@ class PayrollCalculator
                         'reference_month' => $referenceMonth->format('Y-m-d'),
                         'period_type'     => $periodType,
                     ],
-                    array_merge($data, ['deductions' => 0, 'net_total' => $grossTotalCents])
+                    array_merge($data, [
+                        'deductions' => $totalDeductions, 
+                        'deduction_notes' => $deductionNotes,
+                        'net_total' => $grossTotalCents - $totalDeductions
+                    ])
                 );
 
                 if ($payroll->wasRecentlyCreated) {
@@ -121,9 +248,11 @@ class PayrollCalculator
                     return $payroll;
                 }
 
-                $payroll->worked_hours = $totalMinutes;
+                $payroll->worked_hours = $normalMinutes + $nightMinutes;
                 $payroll->gross_total = $grossTotalCents;
-                $payroll->net_total = $grossTotalCents - (int) $payroll->deductions;
+                $payroll->deductions = $totalDeductions;
+                $payroll->deduction_notes = $deductionNotes;
+                $payroll->net_total = $grossTotalCents - $totalDeductions;
                 $payroll->period_type = $periodType;
                 $payroll->save();
 
@@ -148,12 +277,17 @@ class PayrollCalculator
         foreach ($logs as $log) {
             if (!$log->clock_in || !$log->clock_out) continue;
 
-            $start = $log->clock_in;
-            $end   = $log->clock_out;
+            $start = clone $log->clock_in;
+            $end   = clone $log->clock_out;
 
-            // Período noturno: 22:00 do dia até 05:00 do dia seguinte
-            $nightStart = $start->copy()->setTime(22, 0, 0);
-            $nightEnd   = $start->copy()->addDay()->setTime(5, 0, 0);
+            // Se o turno começou antes das 05:00 da manhã, ele pertence à noite do dia anterior
+            if ($start->hour < 5) {
+                $nightStart = $start->copy()->subDay()->setTime(22, 0, 0);
+                $nightEnd   = $start->copy()->setTime(5, 0, 0);
+            } else {
+                $nightStart = $start->copy()->setTime(22, 0, 0);
+                $nightEnd   = $start->copy()->addDay()->setTime(5, 0, 0);
+            }
 
             // Interseção entre jornada e período noturno
             $overlapStart = $start->max($nightStart);

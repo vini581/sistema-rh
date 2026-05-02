@@ -8,17 +8,25 @@ use Carbon\Carbon;
 
 class CalendarService
 {
+    protected static $runtimeCache = [];
+
     /**
      * Retorna o número de dias úteis em um mês específico.
      */
     public static function getWorkingDaysCount(int $year, int $month, ?int $employeeId = null): int
     {
+        $cacheKey = "count_{$year}_{$month}_{$employeeId}";
+        if (isset(self::$runtimeCache[$cacheKey])) {
+            return self::$runtimeCache[$cacheKey];
+        }
+
         $start = Carbon::createFromDate($year, $month, 1)->startOfMonth();
         $end   = $start->copy()->endOfMonth();
 
         // Usa a vigência correta para o mês de referência
         $config = HrConfig::forDate($start, $employeeId);
         $saturdayIsOvertime = $config->saturday_is_overtime;
+        
         $holidays = Holiday::whereYear('date', $year)
             ->whereMonth('date', $month)
             ->pluck('date')
@@ -38,7 +46,7 @@ class CalendarService
             $date->addDay();
         }
 
-        return max(1, $count);
+        return self::$runtimeCache[$cacheKey] = max(1, $count);
     }
 
     /**
@@ -57,19 +65,36 @@ class CalendarService
      */
     public static function isWorkingDay(Carbon $date, ?int $employeeId = null): bool
     {
+        $dateStr = $date->format('Y-m-d');
+        $cacheKey = "is_working_{$dateStr}_{$employeeId}";
+        
+        if (isset(self::$runtimeCache[$cacheKey])) {
+            return self::$runtimeCache[$cacheKey];
+        }
+
         if ($date->isSunday()) {
-            return false;
+            return self::$runtimeCache[$cacheKey] = false;
         }
 
         $config = HrConfig::forDate($date, $employeeId);
         if ($date->isSaturday() && $config->saturday_is_overtime) {
-            return false;
+            return self::$runtimeCache[$cacheKey] = false;
         }
 
-        if (Holiday::isHoliday($date)) {
-            return false;
+        // Cache local de feriados para evitar query única
+        $monthKey = "holidays_{$date->year}_{$date->month}";
+        if (!isset(self::$runtimeCache[$monthKey])) {
+            self::$runtimeCache[$monthKey] = Holiday::whereYear('date', $date->year)
+                ->whereMonth('date', $date->month)
+                ->pluck('date')
+                ->map(fn($d) => Carbon::parse($d)->format('Y-m-d'))
+                ->toArray();
         }
 
-        return true;
+        if (in_array($dateStr, self::$runtimeCache[$monthKey])) {
+            return self::$runtimeCache[$cacheKey] = false;
+        }
+
+        return self::$runtimeCache[$cacheKey] = true;
     }
 }

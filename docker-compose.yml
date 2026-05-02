@@ -1,11 +1,12 @@
 services:
   app:
-    build: ..
+    build: .
     container_name: sistema_rh_app
     restart: unless-stopped
     ports:
       - "8000:80"
     volumes:
+      - ./:/var/www
       - storage_avatars:/var/www/storage/app/public/avatars
     depends_on:
       db:

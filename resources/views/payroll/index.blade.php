@@ -7,12 +7,21 @@
                 <input type="month" name="month" value="{{ $month }}" class="form-input" style="width:200px;">
                 <button type="submit" class="btn btn-secondary">Filtrar</button>
             </form>
-            <form method="POST" action="{{ route('payroll.calculate') }}" style="margin-left:auto;">
+            <form method="POST" action="{{ route('payroll.calculate') }}" style="margin-left:auto; display:flex; gap:8px;">
                 @csrf
                 <input type="hidden" name="month" value="{{ $month }}">
-                <button type="submit" class="btn btn-primary" onclick="return confirm('Calcular folha?')">
+                <input type="hidden" name="type" value="advance">
+                <button type="submit" class="btn btn-secondary" onclick="return confirm('Gerar adiantamento quinzenal para o mês {{ $month }}?')">
+                    Adiantamento Quinzenal
+                </button>
+            </form>
+            <form method="POST" action="{{ route('payroll.calculate') }}">
+                @csrf
+                <input type="hidden" name="month" value="{{ $month }}">
+                <input type="hidden" name="type" value="monthly">
+                <button type="submit" class="btn btn-primary" onclick="return confirm('Calcular folha final do mês {{ $month }}?')">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-                    Calcular Folha
+                    Fechamento Mensal
                 </button>
             </form>
         </div>
@@ -64,6 +73,9 @@
                                 <span class="badge-dot" style="background:{{ $dotColor }};"></span>
                                 {{ $p->status_label }}
                             </span>
+                            @if($p->period_type === 'advance')
+                                <span class="badge" style="background:var(--primary-light); color:var(--primary); margin-top:4px;">Adiantamento</span>
+                            @endif
                         </td>
                         <td style="text-align:right;">
                             <div style="display:flex; justify-content:flex-end; gap:8px;">

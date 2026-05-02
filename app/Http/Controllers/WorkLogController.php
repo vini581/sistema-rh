@@ -53,7 +53,6 @@ class WorkLogController extends Controller
 
             // Trava: mínimo 60 segundos entre batidas pra evitar double-click
             $lastPunch = match ($action) {
-                'clock_in'  => $log->created_at, // se acabou de criar, usa created_at
                 'lunch_out' => $log->clock_in,
                 'lunch_in'  => $log->lunch_out,
                 'clock_out' => $log->lunch_in ?? $log->clock_in,

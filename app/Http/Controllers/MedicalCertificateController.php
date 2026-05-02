@@ -44,7 +44,6 @@ class MedicalCertificateController extends Controller
         $end   = Carbon::parse($validated['end_date']);
         $days  = $start->diffInDays($end) + 1;
 
-        // Evitar duplicidade de atestados para o mesmo período
         $isDuplicate = MedicalCertificate::where('employee_id', $validated['employee_id'])
             ->where(function ($query) use ($start, $end) {
                 $query->whereBetween('start_date', [$start, $end])
@@ -58,6 +57,22 @@ class MedicalCertificateController extends Controller
         if ($isDuplicate) {
             return redirect()->route('certificates.create')
                 ->with('error', 'Já existe um atestado registrado para este funcionário nesse período.');
+        }
+
+        // Evitar conflito com férias aprovadas
+        $hasVacation = \App\Models\VacationRequest::where('employee_id', $validated['employee_id'])
+            ->where('status', 'approved')
+            ->get()
+            ->contains(function ($vacation) use ($start, $end) {
+                $vStart = \Carbon\Carbon::parse($vacation->start_date);
+                $vEnd = $vStart->copy()->addDays($vacation->days - 1);
+                // Checa interseção
+                return $vStart->lte($end) && $vEnd->gte($start);
+            });
+
+        if ($hasVacation) {
+            return redirect()->route('certificates.create')
+                ->with('error', 'O funcionário possui férias aprovadas que conflitam com o período deste atestado.');
         }
 
         $filePath = null;
@@ -89,19 +104,15 @@ class MedicalCertificateController extends Controller
         $config = HrConfig::forDate($certificate->start_date, $certificate->employee_id);
 
         $excused  = (bool) ($config->certificate_excuses_absence ?? true);
-        $counted  = (bool) ($config->certificate_counts_as_worked ?? true);
-        $maxDays  = (int) ($config->certificate_company_paid_days ?? 15);
-
-        // Se ultrapassar o limite de dias pagos pela empresa, marca como não abonado
-        if ($maxDays > 0 && $certificate->days > $maxDays) {
-            $excused = false;
-        }
 
         $certificate->update([
             'status'   => 'approved',
             'excused'  => $excused,
             'deducted' => !$excused,
         ]);
+        
+        // Recalcular banco de horas para remover descontos injustos nos dias de atestado
+        $certificate->employee->recalculateHourBank();
 
         return redirect()->route('certificates.index')
             ->with('success', 'Pronto! Atestado validado e aprovado.');

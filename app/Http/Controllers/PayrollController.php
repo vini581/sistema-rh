@@ -28,17 +28,20 @@ class PayrollController extends Controller
         $month = $request->input('month', now()->format('Y-m'));
         $year  = (int) explode('-', $month)[0];
         $m     = (int) explode('-', $month)[1];
+        $type  = $request->input('type', 'monthly'); // advance or monthly
         
         $employees = Employee::all();
         $count = 0;
 
         foreach ($employees as $employee) {
-            $calculator->calculate($employee, $year, $m);
+            $calculator->calculate($employee, $year, $m, true, $type);
             $count++;
         }
 
+        $msg = $type === 'advance' ? "Adiantamento gerado para {$count} funcionários." : "Folha mensal calculada para {$count} funcionários.";
+
         return redirect()->route('payroll.index', ['month' => $month])
-            ->with('success', "Pronto! Folha calculada para {$count} funcionários.");
+            ->with('success', $msg);
     }
 
     public function calculate(Request $request, PayrollCalculator $calculator)

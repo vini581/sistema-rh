@@ -129,23 +129,29 @@ class Employee extends Model
     public function recalculateHourBank(?WorkLog $specificLog = null): void
     {
         $schedule = $this->workSchedule;
+        
+        // Eager load todos os atestados abonados válidos para processamento em memória
+        $certificates = $this->medicalCertificates()
+            ->where('status', 'approved')
+            ->where('excused', true)
+            ->get();
 
         if ($schedule) {
             $expectedMinutes = $schedule->work_hours_per_day * 60;
             $tolerance       = (int) ($schedule->tolerance_minutes ?? 0);
 
             if ($specificLog) {
-                $this->processLogForHourBank($specificLog, $expectedMinutes, $tolerance);
+                $this->processLogForHourBank($specificLog, $expectedMinutes, $tolerance, $certificates);
                 return;
             }
 
-            DB::transaction(function () use ($expectedMinutes, $tolerance) {
+            DB::transaction(function () use ($expectedMinutes, $tolerance, $certificates) {
                 $this->workLogs()
                     ->whereNotNull('clock_out')
                     ->whereNotNull('total_minutes')
-                    ->chunkById(100, function ($logs) use ($expectedMinutes, $tolerance) {
+                    ->chunkById(100, function ($logs) use ($expectedMinutes, $tolerance, $certificates) {
                         foreach ($logs as $log) {
-                            $this->processLogForHourBank($log, $expectedMinutes, $tolerance);
+                            $this->processLogForHourBank($log, $expectedMinutes, $tolerance, $certificates);
                         }
                     });
             });
@@ -158,29 +164,49 @@ class Employee extends Model
             $monthlyHours = (int) $this->getConfig('monthly_hours', $refDate);
             $workingDays = CalendarService::getWorkingDaysCount($refDate->year, $refDate->month, $this->id);
             $expectedMinutes = $workingDays > 0 ? ($monthlyHours / $workingDays) * 60 : 0;
-            $this->processLogForHourBank($specificLog, $expectedMinutes, 0);
+            $this->processLogForHourBank($specificLog, $expectedMinutes, 0, $certificates);
             return;
         }
 
-        DB::transaction(function () {
+        DB::transaction(function () use ($certificates) {
             $this->workLogs()
                 ->whereNotNull('clock_out')
                 ->whereNotNull('total_minutes')
-                ->chunkById(100, function ($logs) {
+                ->chunkById(100, function ($logs) use ($certificates) {
                     foreach ($logs as $log) {
                         $refDate = $log->work_date;
                         $monthlyHours = (int) $this->getConfig('monthly_hours', $refDate);
                         $workingDays = CalendarService::getWorkingDaysCount($refDate->year, $refDate->month, $this->id);
                         $expectedMinutes = $workingDays > 0 ? ($monthlyHours / $workingDays) * 60 : 0;
-                        $this->processLogForHourBank($log, $expectedMinutes, 0);
+                        $this->processLogForHourBank($log, $expectedMinutes, 0, $certificates);
                     }
                 });
         });
     }
 
-    protected function processLogForHourBank(WorkLog $log, float $expectedMinutes, int $tolerance): void
+    protected function processLogForHourBank(WorkLog $log, float $expectedMinutes, int $tolerance, $certificates = null): void
     {
         if (!$log->clock_out || $log->total_minutes === null) return;
+
+        // Finais de semana e feriados não têm expectativa de horas (tudo que for trabalhado é extra)
+        if (!CalendarService::isWorkingDay($log->work_date, $this->id)) {
+            $expectedMinutes = 0;
+        }
+
+        // Se houver atestado médico abonado para este dia, a expectativa de horas é zerada
+        $hasCertificate = false;
+        if ($certificates) {
+            $hasCertificate = $certificates->contains(function ($c) use ($log) {
+                return $log->work_date->between(
+                    \Carbon\Carbon::parse($c->start_date),
+                    \Carbon\Carbon::parse($c->end_date)
+                );
+            });
+        }
+
+        if ($hasCertificate) {
+            $expectedMinutes = 0;
+        }
 
         $balance = $log->total_minutes - $expectedMinutes;
         

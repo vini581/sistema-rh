@@ -19,6 +19,7 @@ class HrConfig extends Model
         'certificate_excuses_absence', 'certificate_counts_as_worked',
         'certificate_discount_after_days', 'certificate_discount_transport',
         'certificate_discount_food', 'certificate_company_paid_days',
+        'fixed_discount_pct',
     ];
 
     protected function casts(): array
@@ -44,12 +45,22 @@ class HrConfig extends Model
     }
 
     /**
+     * Cache in-memory para evitar queries repetidas em processamentos em lote.
+     */
+    protected static $runtimeCache = [];
+
+    /**
      * Busca a vigência correta para uma data.
      * Prioridade: funcionário específico → global (employee_id = null).
      */
     public static function forDate($date, ?int $employeeId = null): self
     {
         $targetDate = \Carbon\Carbon::parse($date)->endOfMonth();
+        $cacheKey = ($employeeId ?? 'global') . '_' . $targetDate->format('Y-m');
+
+        if (isset(self::$runtimeCache[$cacheKey])) {
+            return self::$runtimeCache[$cacheKey];
+        }
 
         if ($employeeId) {
             $specific = static::where('employee_id', $employeeId)
@@ -57,16 +68,25 @@ class HrConfig extends Model
                 ->orderBy('vigencia_inicio', 'desc')
                 ->first();
 
-            if ($specific) return $specific;
+            if ($specific) {
+                return self::$runtimeCache[$cacheKey] = $specific;
+            }
         }
 
         // Fallback: vigência global
+        $globalCacheKey = 'global_' . $targetDate->format('Y-m');
+        if (isset(self::$runtimeCache[$globalCacheKey])) {
+            return self::$runtimeCache[$cacheKey] = self::$runtimeCache[$globalCacheKey];
+        }
+
         $global = static::whereNull('employee_id')
             ->where('vigencia_inicio', '<=', $targetDate)
             ->orderBy('vigencia_inicio', 'desc')
             ->first();
 
-        return $global ?? static::defaults();
+        $result = $global ?? static::defaults();
+        self::$runtimeCache[$globalCacheKey] = $result;
+        return self::$runtimeCache[$cacheKey] = $result;
     }
 
     /**

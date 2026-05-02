@@ -27,11 +27,11 @@ O foco desse sistema é tirar o peso da burocracia das costas do RH e automatiza
 
 ### Para quem é do RH (Gestores)
 
-* **Organizar a Equipe:** Cadastrar a galera, definir carga horária, salário base e subir a foto de perfil. Se não tiver foto, o sistema gera um avatar com as iniciais do nome.
-* **Manter as Leis em Dia:** Tem uma área só para configurar impostos (INSS, FGTS, etc). Tudo é salvo com data de início (versionamento), garantindo que os cálculos de meses anteriores fiquem intocados.
-* **Controlar Férias e Atestados:** Na hora de lançar uma falta, o backend valida se as datas não estão batendo. O sistema não deixa ninguém lançar um atestado médico no meio das férias de um funcionário, por exemplo.
-* **Rodar a Folha:** Processar os pagamentos do mês cruzando o salário base com horas extras, DSR e descontos de forma automatizada.
-* **Fechamentos Seguros:** Na hora que o RH clica para fechar a folha, o sistema usa *locks* no banco de dados. Isso impede que duas pessoas processem o mesmo pagamento ao mesmo tempo e evitem falhas ou duplicações.
+* **Autonomia Total (Fim das Regras Engessadas):** O sistema não te obriga mais a usar tabelas governamentais rígidas. Agora, o gestor pode configurar "Descontos Fixos %" diretamente no perfil, e a plataforma faz o corte automático no líquido. Você manda no cálculo.
+* **Gestão Inteligente de Faltas e DSR:** O motor agora varre todos os dias úteis. Se o funcionário não bateu ponto e não tem atestado/férias, o sistema lança automaticamente a Falta Injustificada como dedução. E o DSR agora é calculado matematicamente correto sobre as horas extras/normais considerando domingos e feriados.
+* **Folha Flexível (Vale x Fechamento):** Suporta dois tipos de fechamento de folha. Você pode rodar um **Adiantamento Quinzenal** limpo (ex: Vale de 40%) no dia 15, e o sistema guardará a informação para deduzir automaticamente no **Fechamento Mensal** no dia 30.
+* **Blindagem de Atestados x Férias:** Na hora de lançar um atestado, o backend bloqueia na hora se a data coincidir com Férias Aprovadas, impedindo brechas.
+* **Altíssima Performance (Sem N+1):** O motor de cálculo de Banco de Horas e Calendário usa *Cache em Memória RAM* e *Eager Loading*. Mesmo com centenas de funcionários, o processamento de horas e feriados é quase instantâneo.
 
 ### Para os Funcionários
 
@@ -150,7 +150,7 @@ cd sistema-rh
  
 #### Passo 3 — Suba o projeto
  
-Dentro da pasta `docker/`, rode:
+Na raiz do projeto (onde você clonou), rode:
  
 ```bash
 docker compose up --build
