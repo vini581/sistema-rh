@@ -49,6 +49,11 @@ class HrConfig extends Model
      */
     protected static $runtimeCache = [];
 
+    public static function clearCache(): void
+    {
+        self::$runtimeCache = [];
+    }
+
     /**
      * Busca a vigência correta para uma data.
      * Prioridade: funcionário específico → global (employee_id = null).

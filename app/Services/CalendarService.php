@@ -10,6 +10,11 @@ class CalendarService
 {
     protected static $runtimeCache = [];
 
+    public static function clearCache(): void
+    {
+        self::$runtimeCache = [];
+    }
+
     /**
      * Retorna o número de dias úteis em um mês específico.
      */

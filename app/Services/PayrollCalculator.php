@@ -37,7 +37,6 @@ class PayrollCalculator
                 $monthlyHours   = (int) $employee->getConfig('monthly_hours', $referenceMonth);
                 $minMinutes     = (int) ($config->overtime_min_minutes ?? 0);
                 $nightPct       = (int) ($config->night_shift_pct ?? 0);
-                $overtimeWkPct  = (int) ($config->overtime_weekday_pct ?? 50);
                 $paymentType    = $employee->getConfig('payment_type', $referenceMonth);
 
                 // Busca logs do mês
@@ -48,19 +47,17 @@ class PayrollCalculator
                     ->whereNotNull('total_minutes')
                     ->get();
 
-                $totalMinutes = $logs->sum('total_minutes');
-
-                // Dias úteis e expectativa de minutos
-                $workingDays = CalendarService::getWorkingDaysCount($year, $month);
+                // Dias úteis e expectativa de minutos (com config do funcionário)
+                $workingDays = CalendarService::getWorkingDaysCount($year, $month, $employee->id);
                 $expectedMinutes = $monthlyHours * 60;
                 $expectedPerDay  = $workingDays > 0 ? ($expectedMinutes / $workingDays) : 0;
 
                 $isMonthly = ($paymentType === 'monthly');
 
-                $overtimeWkPct  = (int) ($config->overtime_weekday_pct ?? 50);
-                $overtimeSatPct = (int) ($config->overtime_saturday_pct ?? 50);
-                $overtimeSunPct = (int) ($config->overtime_sunday_pct ?? 100);
-                $overtimeHolPct = (int) ($config->overtime_holiday_pct ?? 100);
+                $overtimeWkPct      = (int) ($config->overtime_weekday_pct ?? 50);
+                $overtimeSatPct     = (int) ($config->overtime_saturday_pct ?? 50);
+                $overtimeSunPct     = (int) ($config->overtime_sunday_pct ?? 100);
+                $overtimeHolPct     = (int) ($config->overtime_holiday_pct ?? 100);
                 $saturdayIsOvertime = (bool) ($config->saturday_is_overtime ?? true);
 
                 if ($type === 'advance') {
@@ -81,139 +78,131 @@ class PayrollCalculator
                     $startOfMonth = $referenceMonth->copy();
                     $endOfMonth   = $referenceMonth->copy()->endOfMonth();
 
-                $normalMinutes = 0;
-                $overtimeCents = 0;
-                $totalAbsenceCents = 0;
-                $dsrCents = 0;
-                $normalWorkedMinutesForDSR = 0;
-                $nonWorkingDays = 0;
+                    $normalMinutes     = 0;
+                    $overtimeCents     = 0;
+                    $totalAbsenceCents = 0;
+                    $nonWorkingDays    = 0;
 
-                $vacations = \App\Models\VacationRequest::where('employee_id', $employee->id)
-                    ->where('status', 'approved')->get();
+                    $vacations = \App\Models\VacationRequest::where('employee_id', $employee->id)
+                        ->where('status', 'approved')->get();
 
-                $certificates = MedicalCertificate::where('employee_id', $employee->id)
-                    ->where('status', 'approved')->where('excused', true)->get();
+                    $certificates = MedicalCertificate::where('employee_id', $employee->id)
+                        ->where('status', 'approved')->where('excused', true)->get();
 
-                for ($date = clone $startOfMonth; $date->lte($endOfMonth); $date->addDay()) {
-                    $isWorkingDay = CalendarService::isWorkingDay($date, $employee->id);
-                    $isHoliday = \App\Models\Holiday::isHoliday($date);
+                    // Cache de feriados do mês inteiro (Bug 1: elimina N+1)
+                    $holidayDates = \App\Models\Holiday::whereYear('date', $year)
+                        ->whereMonth('date', $month)
+                        ->pluck('date')
+                        ->map(fn($d) => \Carbon\Carbon::parse($d)->format('Y-m-d'))
+                        ->toArray();
 
-                    if (!$isWorkingDay) {
-                        $nonWorkingDays++;
-                    }
+                    $schedule = $employee->workSchedule;
+                    $dailyExpected = $schedule ? (int)($schedule->work_hours_per_day * 60) : (int)$expectedPerDay;
 
-                    $log = $logs->first(function($l) use ($date) {
-                        return $l->work_date->isSameDay($date);
-                    });
-                    $worked = $log ? (int) $log->total_minutes : 0;
+                    for ($date = clone $startOfMonth; $date->lte($endOfMonth); $date->addDay()) {
+                        $isWorkingDay = CalendarService::isWorkingDay($date, $employee->id);
+                        $isHoliday    = in_array($date->format('Y-m-d'), $holidayDates);
 
-                    if (!$isWorkingDay) {
-                        // Dia não útil: todo o trabalho é hora extra com taxa especial
-                        if ($worked > 0) {
-                            $pct = $overtimeWkPct;
-                            if ($isHoliday) {
-                                $pct = $overtimeHolPct;
-                            } elseif ($date->isSunday()) {
-                                $pct = $overtimeSunPct;
-                            } elseif ($date->isSaturday() && $saturdayIsOvertime) {
-                                $pct = $overtimeSatPct;
-                            }
-                            
-                            $overtimeCents += (int) round(($worked / 60) * $hourlyRate * (1 + $pct / 100));
-                            $normalWorkedMinutesForDSR += $worked;
+                        if (!$isWorkingDay) {
+                            $nonWorkingDays++;
                         }
-                    } else {
-                        // Dia útil: separa o que é normal do que é extra
-                        $schedule = $employee->workSchedule;
-                        $dailyExpected = $schedule ? (int)($schedule->work_hours_per_day * 60) : (int)$expectedPerDay;
-                        
-                        $hasVacation = $vacations->contains(function ($v) use ($date) {
-                            $vStart = \Carbon\Carbon::parse($v->start_date);
-                            $vEnd = $vStart->copy()->addDays($v->days - 1);
-                            return $date->between($vStart, $vEnd);
-                        });
 
-                        $hasCertificate = $certificates->contains(function ($c) use ($date) {
-                            $cStart = \Carbon\Carbon::parse($c->start_date);
-                            $cEnd = \Carbon\Carbon::parse($c->end_date);
-                            return $date->between($cStart, $cEnd);
-                        });
+                        $log = $logs->first(fn($l) => $l->work_date->isSameDay($date));
+                        $worked = $log ? (int) $log->total_minutes : 0;
 
-                        if ($hasVacation || $hasCertificate) {
-                            // Férias e atestados contam como dia trabalhado cheio
-                            $normalMinutes += $dailyExpected;
-                            $normalWorkedMinutesForDSR += $dailyExpected;
+                        if (!$isWorkingDay) {
+                            // Dia não útil: todo o trabalho é hora extra com taxa especial
+                            if ($worked > 0) {
+                                $pct = $overtimeWkPct;
+                                if ($isHoliday) {
+                                    $pct = $overtimeHolPct;
+                                } elseif ($date->isSunday()) {
+                                    $pct = $overtimeSunPct;
+                                } elseif ($date->isSaturday() && $saturdayIsOvertime) {
+                                    $pct = $overtimeSatPct;
+                                }
+
+                                $overtimeCents += (int) round(($worked / 60) * $hourlyRate * (1 + $pct / 100));
+                            }
                         } else {
-                            if ($worked > $dailyExpected) {
+                            // Dia útil
+                            $hasVacation = $vacations->contains(fn($v) => $v->coversDate($date));
+
+                            $hasCertificate = $certificates->contains(function ($c) use ($date) {
+                                return $date->between(
+                                    \Carbon\Carbon::parse($c->start_date),
+                                    \Carbon\Carbon::parse($c->end_date)
+                                );
+                            });
+
+                            if ($hasVacation || $hasCertificate) {
+                                // Férias e atestados contam como dia trabalhado cheio
                                 $normalMinutes += $dailyExpected;
-                                $normalWorkedMinutesForDSR += $dailyExpected;
-                                $extraToday = $worked - $dailyExpected;
-                                
-                                if ($extraToday >= $minMinutes) {
-                                    $overtimeCents += (int) round(($extraToday / 60) * $hourlyRate * (1 + $overtimeWkPct / 100));
-                                    $normalWorkedMinutesForDSR += $extraToday;
-                                }
                             } else {
-                                $normalMinutes += $worked;
-                                $normalWorkedMinutesForDSR += $worked;
-                                // Faltou horas ou dia todo
-                                $missingToday = $dailyExpected - $worked;
-                                if ($missingToday > 0) {
-                                    $totalAbsenceCents += (int) round(($missingToday / 60) * $hourlyRate);
+                                if ($worked > $dailyExpected) {
+                                    $normalMinutes += $dailyExpected;
+                                    $extraToday = $worked - $dailyExpected;
+
+                                    if ($extraToday >= $minMinutes) {
+                                        $overtimeCents += (int) round(($extraToday / 60) * $hourlyRate * (1 + $overtimeWkPct / 100));
+                                    }
+                                } else {
+                                    $normalMinutes += $worked;
+                                    // Faltou horas ou dia todo
+                                    $missingToday = $dailyExpected - $worked;
+                                    if ($missingToday > 0) {
+                                        $totalAbsenceCents += (int) round(($missingToday / 60) * $hourlyRate);
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                if ($workingDays > 0) {
-                    $dsrCents = (int) round(($normalWorkedMinutesForDSR / 60 / $workingDays) * $nonWorkingDays * $hourlyRate);
-                }
+                    // Adicional noturno (22h-5h): estimativa baseada nos logs
+                    $nightMinutes = $this->calculateNightMinutes($logs);
+                    $nightCents = $nightPct > 0
+                        ? (int) round(($nightMinutes / 60) * $hourlyRate * ($nightPct / 100))
+                        : 0;
 
-                // Adicional noturno (22h-5h): estimativa baseada nos logs
-                $nightMinutes = $this->calculateNightMinutes($logs);
-                $nightCents = $nightPct > 0
-                    ? (int) round(($nightMinutes / 60) * $hourlyRate * ($nightPct / 100))
-                    : 0;
+                    // DSR: mensalista = sobre horas extras; horista = sobre tudo
+                    if ($isMonthly) {
+                        $normalCents = (int) round($monthlyHours * $hourlyRate);
+                        $dsrCents = $workingDays > 0 ? (int) round(($overtimeCents / $workingDays) * $nonWorkingDays) : 0;
+                    } else {
+                        $normalCents = (int) round(($normalMinutes / 60) * $hourlyRate);
+                        $dsrCents = $workingDays > 0 ? (int) round((($normalCents + $overtimeCents) / $workingDays) * $nonWorkingDays) : 0;
+                    }
 
-                if ($isMonthly) {
-                    $normalCents = (int) round($monthlyHours * $hourlyRate);
-                    // DSR sobre horas extras
-                    $dsrCents = $workingDays > 0 ? (int) round(($overtimeCents / $workingDays) * $nonWorkingDays) : 0;
-                } else {
-                    $normalCents = (int) round(($normalMinutes / 60) * $hourlyRate);
-                    // DSR sobre horas normais e extras
-                    $dsrCents = $workingDays > 0 ? (int) round((($normalCents + $overtimeCents) / $workingDays) * $nonWorkingDays) : 0;
-                }
+                    $grossTotalCents = $normalCents + $overtimeCents + $nightCents + $dsrCents;
 
-                $grossTotalCents = $normalCents + $overtimeCents + $nightCents + $dsrCents;
+                    // Checa se já teve adiantamento fechado no mês
+                    $advancePaid = Payroll::where('employee_id', $employee->id)
+                        ->where('reference_month', $referenceMonth->format('Y-m-d'))
+                        ->where('period_type', 'advance')
+                        ->whereIn('status', ['closed', 'paid'])
+                        ->first();
+                    $advanceDeduction = $advancePaid ? $advancePaid->net_total : 0;
 
-                // Checa se já teve adiantamento fechado no mês
-                $advancePaid = Payroll::where('employee_id', $employee->id)
-                    ->where('reference_month', $referenceMonth->format('Y-m-d'))
-                    ->where('period_type', 'advance')
-                    ->whereIn('status', ['closed', 'paid'])
-                    ->first();
-                $advanceDeduction = $advancePaid ? $advancePaid->net_total : 0;
+                    $data = [
+                        'worked_hours' => $normalMinutes + $nightMinutes,
+                        'gross_total'  => $grossTotalCents,
+                        'status'       => $persist ? 'calculated' : 'draft',
+                    ];
 
-                $data = [
-                    'worked_hours' => $normalMinutes + $nightMinutes, // horas base (normal + noturno)
-                    'gross_total'  => $grossTotalCents,
-                    'status'       => $persist ? 'calculated' : 'draft',
-                ];
+                    // Aplica dedução fixa configurada manualmente (Imposto Fixo)
+                    $fixedDiscountPct = (int) ($config->fixed_discount_pct ?? 0);
+                    $fixedDiscountCents = (int) round($grossTotalCents * ($fixedDiscountPct / 100));
 
-                // Aplica dedução fixa configurada manualmente (Imposto Fixo)
-                $fixedDiscountPct = (int) ($config->fixed_discount_pct ?? 0);
-                $fixedDiscountCents = (int) round($grossTotalCents * ($fixedDiscountPct / 100));
-                
-                $totalDeductions = $totalAbsenceCents + $fixedDiscountCents + $advanceDeduction;
-                $deductionNotes = "Faltas: R$ " . number_format($totalAbsenceCents/100, 2, ',', '.') . ($fixedDiscountCents > 0 ? " | Impostos: R$ " . number_format($fixedDiscountCents/100, 2, ',', '.') : "");
-                if ($advanceDeduction > 0) {
-                    $deductionNotes .= " | Adiantamento: R$ " . number_format($advanceDeduction/100, 2, ',', '.');
-                }
-                
-                $periodType = $paymentType === 'biweekly' ? 'biweekly' : 'monthly';
-                
+                    $totalDeductions = $totalAbsenceCents + $fixedDiscountCents + $advanceDeduction;
+                    $deductionNotes = "Faltas: R$ " . number_format($totalAbsenceCents/100, 2, ',', '.');
+                    if ($fixedDiscountCents > 0) {
+                        $deductionNotes .= " | Impostos: R$ " . number_format($fixedDiscountCents/100, 2, ',', '.');
+                    }
+                    if ($advanceDeduction > 0) {
+                        $deductionNotes .= " | Adiantamento: R$ " . number_format($advanceDeduction/100, 2, ',', '.');
+                    }
+
+                    $periodType = $paymentType === 'biweekly' ? 'biweekly' : 'monthly';
                 } // End of else ($type === 'monthly')
 
                 if (!$persist) {
@@ -222,7 +211,7 @@ class PayrollCalculator
                     $payroll->reference_month = $referenceMonth->format('Y-m-d');
                     $payroll->deductions = $totalDeductions;
                     $payroll->deduction_notes = $deductionNotes;
-                    $payroll->net_total = $grossTotalCents - $totalDeductions;
+                    $payroll->net_total = max(0, $grossTotalCents - $totalDeductions);
                     return $payroll;
                 }
 
@@ -235,7 +224,7 @@ class PayrollCalculator
                     array_merge($data, [
                         'deductions' => $totalDeductions, 
                         'deduction_notes' => $deductionNotes,
-                        'net_total' => $grossTotalCents - $totalDeductions
+                        'net_total' => max(0, $grossTotalCents - $totalDeductions)
                     ])
                 );
 
@@ -252,7 +241,7 @@ class PayrollCalculator
                 $payroll->gross_total = $grossTotalCents;
                 $payroll->deductions = $totalDeductions;
                 $payroll->deduction_notes = $deductionNotes;
-                $payroll->net_total = $grossTotalCents - $totalDeductions;
+                $payroll->net_total = max(0, $grossTotalCents - $totalDeductions);
                 $payroll->period_type = $periodType;
                 $payroll->save();
 

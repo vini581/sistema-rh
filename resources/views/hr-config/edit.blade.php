@@ -220,6 +220,25 @@
                 </div>
             </div>
 
+            {{-- Deduções Fixas --}}
+            <div class="card fade-up fade-up-5" style="margin-bottom:24px;">
+                <div class="card-header"><span class="card-title">Deduções Fixas</span></div>
+                <div class="card-body">
+                    <div style="display:grid; grid-template-columns:1fr 2fr; gap:16px; align-items:start;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">Desconto Fixo (%)</label>
+                            <input type="number" name="fixed_discount_pct" class="form-input" min="0" max="100" value="{{ old('fixed_discount_pct', $config->fixed_discount_pct ?? 0) }}" required>
+                            <div class="form-hint">Aplicado sobre o bruto (impostos, contribuições, etc.)</div>
+                        </div>
+                        <div style="padding-top:28px;">
+                            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 18px;font-size:13px;color:var(--text-muted);line-height:1.6;">
+                                <strong style="color:var(--text);">Como funciona:</strong> Este percentual é descontado automaticamente do valor bruto da folha de pagamento de todos os funcionários. Use para aplicar impostos ou contribuições fixas que a empresa desconta na fonte.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <button type="submit" class="btn btn-primary" style="padding:14px 28px; font-size:15px;">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                 Aplicar essas regras

@@ -64,10 +64,8 @@ class MedicalCertificateController extends Controller
             ->where('status', 'approved')
             ->get()
             ->contains(function ($vacation) use ($start, $end) {
-                $vStart = \Carbon\Carbon::parse($vacation->start_date);
-                $vEnd = $vStart->copy()->addDays($vacation->days - 1);
-                // Checa interseção
-                return $vStart->lte($end) && $vEnd->gte($start);
+                return $vacation->coversDate($start) || $vacation->coversDate($end)
+                    || ($start->lte($vacation->end_date) && $end->gte($vacation->start_date));
             });
 
         if ($hasVacation) {

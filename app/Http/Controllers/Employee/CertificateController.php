@@ -62,6 +62,20 @@ class CertificateController extends Controller
                 ->with('error', 'Já existe um atestado registrado (ou em análise) para este período.');
         }
 
+        // Evitar conflito com férias aprovadas
+        $hasVacation = \App\Models\VacationRequest::where('employee_id', $employee->id)
+            ->where('status', 'approved')
+            ->get()
+            ->contains(function ($vacation) use ($start, $end) {
+                return $vacation->coversDate($start) || $vacation->coversDate($end)
+                    || ($start->lte($vacation->end_date) && $end->gte($vacation->start_date));
+            });
+
+        if ($hasVacation) {
+            return redirect()->route('employee.certificates.index')
+                ->with('error', 'Você possui férias aprovadas que conflitam com este período. Não é possível lançar atestado.');
+        }
+
         $filePath = null;
         if ($request->hasFile('file')) {
             $filePath = $request->file('file')->store('certificates', 'public');

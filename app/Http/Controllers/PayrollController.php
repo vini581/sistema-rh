@@ -33,6 +33,10 @@ class PayrollController extends Controller
         $employees = Employee::all();
         $count = 0;
 
+        // Limpa caches estáticos uma vez antes do lote (eficiência máxima)
+        \App\Services\CalendarService::clearCache();
+        \App\Models\HrConfig::clearCache();
+
         foreach ($employees as $employee) {
             $calculator->calculate($employee, $year, $m, true, $type);
             $count++;

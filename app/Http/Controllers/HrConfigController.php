@@ -66,6 +66,7 @@ class HrConfigController extends Controller
             'certificate_discount_transport' => 'boolean',
             'certificate_discount_food'      => 'boolean',
             'certificate_company_paid_days'  => 'required|integer|min:0',
+            'fixed_discount_pct'             => 'required|integer|min:0|max:100',
         ]);
 
         // Validação de soma das quinzenas = 100%

@@ -53,14 +53,10 @@ class VacationController extends Controller
         // Evitar sobreposição com férias já aprovadas
         $hasConflict = VacationRequest::where('employee_id', $employee->id)
             ->where('status', 'approved')
-            ->where(function ($q) use ($startDate, $endDate) {
-                $q->whereBetween('start_date', [$startDate, $endDate])
-                  ->orWhereRaw('DATE_ADD(start_date, INTERVAL days - 1 DAY) BETWEEN ? AND ?', [$startDate, $endDate])
-                  ->orWhere(function ($q2) use ($startDate, $endDate) {
-                      $q2->where('start_date', '<=', $startDate)
-                         ->whereRaw('DATE_ADD(start_date, INTERVAL days - 1 DAY) >= ?', [$endDate]);
-                  });
-            })->exists();
+            ->get()
+            ->contains(function ($v) use ($startDate, $endDate) {
+                return $startDate->lte($v->end_date) && $endDate->gte($v->start_date);
+            });
 
         if ($hasConflict) {
             return redirect()->route('employee.vacations.index')
