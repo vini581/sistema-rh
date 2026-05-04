@@ -32,12 +32,13 @@ class ReportController extends Controller
 
             // Usa o calendário específico do funcionário (para ler a flag de sábado corretamente)
             $workingDays = CalendarService::getWorkingDaysCount($year, $monthNum, $employee->id);
+            $referenceDate = \Carbon\Carbon::createFromDate($year, $monthNum, 1);
 
             // Horas esperadas: jornada individual ou config global por vigência
             if ($employee->workSchedule) {
                 $expectedPerDay = $employee->workSchedule->work_hours_per_day * 60;
             } else {
-                $monthlyHours = (int) $employee->getConfig('monthly_hours', "$year-$monthNum-01");
+                $monthlyHours = (int) $employee->getConfig('monthly_hours', $referenceDate);
                 $expectedPerDay = $workingDays > 0 ? ($monthlyHours * 60 / $workingDays) : 0;
             }
 

@@ -30,7 +30,7 @@ class PayrollController extends Controller
         $m     = (int) explode('-', $month)[1];
         $type  = $request->input('type', 'monthly'); // advance or monthly
         
-        $employees = Employee::all();
+        $employees = Employee::with('workSchedule')->get();
         $count = 0;
 
         // Limpa caches estáticos uma vez antes do lote (eficiência máxima)

@@ -279,8 +279,8 @@ class PayrollCalculator
             }
 
             // Interseção entre jornada e período noturno
-            $overlapStart = $start->max($nightStart);
-            $overlapEnd   = $end->min($nightEnd);
+            $overlapStart = $start->copy()->max($nightStart);
+            $overlapEnd   = $end->copy()->min($nightEnd);
 
             if ($overlapStart->lt($overlapEnd)) {
                 $total += $overlapStart->diffInMinutes($overlapEnd);
