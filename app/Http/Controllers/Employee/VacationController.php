@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Employee;
 
 use App\Http\Controllers\Controller;
 use App\Models\VacationRequest;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -82,6 +83,14 @@ class VacationController extends Controller
             'forecast_value'  => $estimatedValue,
             'status'          => 'pending',
         ]);
+
+        // Notificar admins sobre o pedido de férias
+        $employeeName = Auth::user()->name;
+        NotificationService::notifyAdmins(
+            '🏖️ Novo Pedido de Férias',
+            $employeeName . ' solicitou ' . $validated['days'] . ' dias de férias a partir de ' . $startDate->format('d/m/Y') . '.',
+            route('certificates.index') // Redirecionar para painel admin (sem rota dedicada de férias admin)
+        );
 
         return redirect()->route('employee.vacations.index')
             ->with('success', 'Pronto! Seu pedido de férias foi enviado e está em análise.');

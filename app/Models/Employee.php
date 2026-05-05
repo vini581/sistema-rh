@@ -17,8 +17,15 @@ class Employee extends Model
     protected $fillable = [
         'user_id',
         'cpf',
+        'rg',
+        'birth_date',
+        'gender',
+        'marital_status',
+        'emergency_contact_name',
+        'emergency_contact_phone',
         'position',
         'address',
+        'phone',
         'admission_date',
         'hourly_rate',
         'base_salary',
@@ -28,6 +35,7 @@ class Employee extends Model
     {
         return [
             'admission_date' => 'date',
+            'birth_date'     => 'date',
             'hourly_rate'    => 'integer',
             'base_salary'    => 'integer',
         ];

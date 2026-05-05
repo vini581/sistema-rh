@@ -56,10 +56,11 @@ class User extends Authenticatable
 
     public function getAvatarUrlAttribute(): string
     {
-        if ($this->avatar) {
+        if ($this->avatar && \Illuminate\Support\Facades\Storage::disk('public')->exists($this->avatar)) {
             return asset('storage/' . $this->avatar);
         }
 
-        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&color=7F9CF5&background=EBF4FF';
+        // Fallback: gera avatar com iniciais usando cores da marca
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&color=1bbfbf&background=e6f9f9&size=128&bold=true';
     }
 }

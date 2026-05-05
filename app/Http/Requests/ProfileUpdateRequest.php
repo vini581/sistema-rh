@@ -16,7 +16,7 @@ class ProfileUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required',
@@ -28,5 +28,21 @@ class ProfileUpdateRequest extends FormRequest
             ],
             'avatar' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
         ];
+
+        if ($this->user()->employee) {
+            $empId = $this->user()->employee->id;
+            $rules = array_merge($rules, [
+                'rg' => ['nullable', 'string', 'max:20', Rule::unique('employees', 'rg')->ignore($empId)],
+                'birth_date' => ['nullable', 'date'],
+                'gender' => ['nullable', 'in:not_specified,male,female,other'],
+                'marital_status' => ['nullable', 'in:single,married,divorced,widowed,other'],
+                'phone' => ['nullable', 'string', 'max:20'],
+                'address' => ['required', 'string', 'max:500'],
+                'emergency_contact_name' => ['nullable', 'string', 'max:255'],
+                'emergency_contact_phone' => ['nullable', 'string', 'max:20'],
+            ]);
+        }
+
+        return $rules;
     }
 }

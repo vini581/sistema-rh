@@ -6,14 +6,14 @@
             <div class="card-body" style="text-align:center; padding:36px;">
 
                 <div style="margin-bottom:24px;">
-                    <img src="{{ Auth::user()->avatar_url }}" style="width:80px; height:80px; border-radius:20px; object-fit:cover; border:2px solid var(--primary); padding:2px; margin:0 auto;" alt="{{ Auth::user()->name }}">
+                    <img src="{{ Auth::user()->avatar_url }}" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:1px solid var(--border); padding:4px; margin:0 auto;" alt="{{ Auth::user()->name }}">
                     <div style="margin-top:12px; font-weight:700; font-size:18px;">{{ Auth::user()->name }}</div>
                 </div>
 
                 {{-- Data e hora --}}
                 <div style="margin-bottom:32px;">
-                    <div style="font-size:13px; color:var(--text-muted); margin-bottom:4px;">{{ now()->format('l, d \d\e F \d\e Y') }}</div>
-                    <div id="clock" style="font-size:52px; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--primary); letter-spacing:-2px; line-height:1;"></div>
+                    <div style="font-size:13px; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:1px;">{{ now()->format('l, d M Y') }}</div>
+                    <div id="clock" style="font-size:52px; font-weight:800; font-family:'JetBrains Mono',monospace; color:var(--text); letter-spacing:-2px; line-height:1;"></div>
                 </div>
 
                 {{-- Status dos 4 pontos --}}

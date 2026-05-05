@@ -5,115 +5,119 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Smart Telecom — RH</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        // Detecta o fuso horário da máquina do usuário e grava em cookie
-        // para que o servidor acompanhe o relógio local do navegador.
-        (function() {
-            var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            if (tz && document.cookie.indexOf('client_timezone=' + tz) === -1) {
-                document.cookie = 'client_timezone=' + tz + ';path=/;max-age=31536000;SameSite=Lax';
-                // Recarrega na primeira visita para que o servidor já use o timezone correto
-                if (document.cookie.indexOf('client_timezone=') === -1) return;
-                if (!window.__tzReloaded) {
-                    window.__tzReloaded = true;
-                    location.reload();
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#e6f9f9', 100: '#ccf2f2', 500: '#1bbfbf', 600: '#118b8b', 900: '#0a4d4d' },
+                        slate: { 850: '#151e2e', 900: '#0f172a', 950: '#020617' }
+                    }
                 }
             }
-        })();
+        }
     </script>
+    @livewireStyles
+
     <style>
         :root {
-            --primary:     #1BBFBF;
-            --primary-dk:  #0e9393;
-            --primary-lt:  #e0f7f7;
-            --secondary:   #334155;
+            --primary:     #1bbfbf;
+            --on-primary:  #ffffff;
+            --primary-dk:  #118b8b;
+            --primary-lt:  #e6f9f9;
+            --secondary:   #71717a;
             --surface:     #ffffff;
-            --surface2:    #f8fafc;
-            --border:      #e2e8f0;
-            --text:        #0f172a;
-            --text-muted:  #64748b;
+            --surface2:    #fafafa;
+            --border:      #e4e4e7;
+            --text:        #09090b;
+            --text-muted:  #71717a;
             --danger:      #ef4444;
             --warning:     #f59e0b;
             --success:     #10b981;
         }
         .dark {
-            --primary:     #1BBFBF;
-            --primary-dk:  #0e9393;
-            --primary-lt:  #0f3333;
-            --secondary:   #94a3b8;
-            --surface:     #0f172a;
-            --surface2:    #1e293b;
-            --border:      #334155;
-            --text:        #f1f5f9;
-            --text-muted:  #94a3b8;
+            --primary:     #1bbfbf;
+            --on-primary:  #ffffff;
+            --primary-dk:  #118b8b;
+            --primary-lt:  #1bbfbf1a;
+            --secondary:   #a1a1aa;
+            --surface:     #09090b;
+            --surface2:    #09090b;
+            --border:      #27272a;
+            --text:        #fafafa;
+            --text-muted:  #a1a1aa;
+            --danger:      #f87171;
+            --warning:     #fbbf24;
+            --success:     #34d399;
         }
-        * { font-family: 'Sora', sans-serif; box-sizing: border-box; }
+        * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
         body { background: var(--surface2); color: var(--text); margin: 0; transition: background .3s, color .3s; }
 
         /* Sidebar */
         .sidebar {
-            width: 260px; min-height: 100vh; background: var(--secondary);
+            width: 260px; min-height: 100vh; background: var(--surface);
             position: fixed; left: 0; top: 0; z-index: 50;
             display: flex; flex-direction: column;
             transition: transform .3s ease, width .3s ease;
-            box-shadow: 4px 0 24px rgba(0,0,0,.15);
+            border-right: 1px solid var(--border);
         }
         .sidebar.collapsed { width: 72px; }
         .sidebar-brand {
-            padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,.08);
+            padding: 24px 20px; border-bottom: 1px solid var(--border);
             display: flex; align-items: center; gap: 12px; overflow: hidden;
         }
         .brand-icon {
-            width: 40px; height: 40px; border-radius: 10px;
-            background: transparent; display: flex; align-items: center;
-            justify-content: center; flex-shrink: 0;
+            width: 32px; height: 32px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
-        .brand-icon svg { width: 22px; height: 22px; color: white; }
+        .brand-icon svg { width: 22px; height: 22px; color: var(--text); }
         .brand-text { overflow: hidden; white-space: nowrap; }
-        .brand-text h1 { font-size: 14px; font-weight: 700; color: white; margin: 0; line-height: 1.2; }
-        .brand-text p  { font-size: 10px; color: rgba(255,255,255,.45); margin: 2px 0 0; letter-spacing: .5px; text-transform: uppercase; }
+        .brand-text h1 { font-size: 15px; font-weight: 600; color: var(--text); margin: 0; letter-spacing: -0.5px; }
+        .brand-text p  { font-size: 11px; color: var(--text-muted); margin: 2px 0 0; }
 
-        .nav-section { padding: 20px 16px 6px; font-size: 10px; font-weight: 600;
-            color: rgba(255,255,255,.3); letter-spacing: 1.5px; text-transform: uppercase;
+        .nav-section { padding: 24px 16px 8px; font-size: 11px; font-weight: 600;
+            color: var(--text-muted); letter-spacing: 0.5px;
             white-space: nowrap; overflow: hidden; }
         .nav-item {
             display: flex; align-items: center; gap: 12px;
-            padding: 11px 16px; margin: 2px 8px; border-radius: 10px;
-            color: rgba(255,255,255,.6); font-size: 13.5px; font-weight: 500;
+            padding: 10px 16px; margin: 4px 12px; border-radius: 8px;
+            color: var(--text-muted); font-size: 13.5px; font-weight: 500;
             text-decoration: none; transition: all .2s; white-space: nowrap; overflow: hidden;
             position: relative;
         }
-        .nav-item:hover { background: rgba(255,255,255,.08); color: white; }
-        .nav-item.active { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(27,191,191,.35); }
+        .nav-item:hover { background: var(--surface2); color: var(--text); }
+        .nav-item.active { background: var(--primary-lt); color: var(--text); font-weight: 600; }
         .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
         .nav-badge {
-            margin-left: auto; background: var(--primary); color: white;
+            margin-left: auto; background: var(--primary); color: var(--on-primary);
             font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 99px;
         }
-        .nav-item.active .nav-badge { background: rgba(255,255,255,.25); }
+        .nav-item.active .nav-badge { opacity: 0.9; }
 
         .sidebar-footer {
-            margin-top: auto; padding: 16px; border-top: 1px solid rgba(255,255,255,.08);
+            margin-top: auto; padding: 16px; border-top: 1px solid var(--border);
         }
         .user-card {
             display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-            border-radius: 10px; background: rgba(255,255,255,.06);
+            border-radius: 10px; background: var(--surface2);
             overflow: hidden; cursor: pointer; transition: background .2s;
         }
-        .user-card:hover { background: rgba(255,255,255,.1); }
+        .user-card:hover { background: var(--border); }
         .user-avatar {
             width: 36px; height: 36px; border-radius: 10px;
             background: var(--primary); display: flex; align-items: center;
-            justify-content: center; color: white; font-weight: 700; font-size: 14px;
+            justify-content: center; color: var(--on-primary); font-weight: 700; font-size: 14px;
             flex-shrink: 0;
         }
         .user-info { overflow: hidden; flex: 1; }
-        .user-name { font-size: 13px; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .user-role { font-size: 11px; color: rgba(255,255,255,.4); white-space: nowrap; }
+        .user-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .user-role { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
 
         /* Main */
         .main-wrap { margin-left: 260px; min-height: 100vh; transition: margin .3s; }
@@ -121,11 +125,13 @@
 
         /* Topbar */
         .topbar {
-            background: var(--surface); border-bottom: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
             padding: 0 28px; height: 64px; display: flex; align-items: center;
             justify-content: space-between; position: sticky; top: 0; z-index: 40;
-            box-shadow: 0 1px 8px rgba(0,0,0,.04);
         }
+        .dark .topbar { background: rgba(9, 9, 11, 0.7); }
         .topbar-left { display: flex; align-items: center; gap: 16px; }
         .topbar-title { font-size: 17px; font-weight: 600; color: var(--text); }
         .topbar-right { display: flex; align-items: center; gap: 8px; }
@@ -225,8 +231,8 @@
             cursor: pointer; text-decoration: none; transition: all .2s; white-space: nowrap;
         }
         .btn svg { width: 16px; height: 16px; }
-        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(27,191,191,.3); }
-        .btn-primary:hover { background: var(--primary-dk); box-shadow: 0 6px 18px rgba(27,191,191,.4); transform: translateY(-1px); }
+        .btn-primary { background: var(--primary); color: var(--on-primary); }
+        .btn-primary:hover { background: var(--primary-dk); transform: translateY(-1px); }
         .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
         .btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
         .btn-danger { background: #fee2e2; color: var(--danger); }
@@ -242,7 +248,7 @@
             width: 100%; padding: 10px 14px; border: 1.5px solid var(--border);
             border-radius: 10px; font-size: 14px; color: var(--text);
             background: var(--surface); outline: none; transition: border .2s, box-shadow .2s;
-            font-family: 'Sora', sans-serif;
+            font-family: 'Inter', sans-serif;
         }
         .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(27,191,191,.12); }
         .form-input::placeholder { color: var(--text-muted); }
@@ -392,26 +398,32 @@
     </nav>
 
     <div class="sidebar-footer">
-        <div class="user-card" x-show="sidebarOpen" x-transition>
-            <div class="user-avatar">
-                <img src="{{ Auth::user()->avatar_url }}" style="width:100%; height:100%; border-radius:10px; object-fit:cover;">
+        {{-- Link para perfil (sidebar aberto) --}}
+        <a href="{{ route('profile.edit') }}" class="user-card" x-show="sidebarOpen" x-transition style="text-decoration:none;" title="Meu Perfil">
+            <div class="user-avatar" style="position:relative; overflow:hidden;">
+                <img src="{{ Auth::user()->avatar_url }}" style="width:100%; height:100%; border-radius:10px; object-fit:cover;" onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&color=1bbfbf&background=e6f9f9&size=96&bold=true'">
             </div>
             <div class="user-info">
                 <div class="user-name">{{ Auth::user()->name }}</div>
                 <div class="user-role">{{ Auth::user()->isAdmin() ? 'Gestor de RH' : 'Funcionário' }}</div>
             </div>
-        </div>
-        <div x-show="!sidebarOpen" style="display:flex; justify-content:center;">
-            <div class="user-avatar">
-                <img src="{{ Auth::user()->avatar_url }}" style="width:100%; height:100%; border-radius:10px; object-fit:cover;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;flex-shrink:0;color:var(--text-muted);opacity:0.6;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </a>
+
+        {{-- Link para perfil (sidebar colapsado) --}}
+        <a href="{{ route('profile.edit') }}" x-show="!sidebarOpen" style="display:flex; justify-content:center; text-decoration:none;" title="Meu Perfil">
+            <div class="user-avatar" style="position:relative; overflow:hidden;">
+                <img src="{{ Auth::user()->avatar_url }}" style="width:100%; height:100%; border-radius:10px; object-fit:cover;" onerror="this.src='https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&color=1bbfbf&background=e6f9f9&size=96&bold=true'">
             </div>
-        </div>
+        </a>
 
         <form method="POST" action="{{ route('logout') }}" style="margin-top:8px;">
             @csrf
             <button type="submit" class="nav-item" style="width:100%; border:none; cursor:pointer; background:transparent; text-align:left;">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:rgba(255,255,255,.5)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-                <span x-show="sidebarOpen" x-transition style="color:rgba(255,255,255,.5); font-size:13px;">Sair do sistema</span>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                <span x-show="sidebarOpen" x-transition style="font-size:13px;">Sair do sistema</span>
             </button>
         </form>
     </div>
@@ -434,10 +446,8 @@
                 <svg x-show="!darkMode" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
                 <svg x-show="darkMode" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
             </button>
-            {{-- Notifications (placeholder sem funcionalidade real) --}}
-            <button class="topbar-btn" title="Notificações (em breve)">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-            </button>
+            {{-- Notifications --}}
+            <livewire:notification-bell />
         </div>
     </header>
 
@@ -465,5 +475,7 @@
     </main>
 </div>
 
+@livewireScripts
+<livewire:command-palette />
 </body>
 </html>

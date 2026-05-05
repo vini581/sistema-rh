@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use App\Models\Payroll;
+use App\Services\NotificationService;
 use App\Services\PayrollCalculator;
 use Illuminate\Http\Request;
 
@@ -30,12 +31,8 @@ class PayrollController extends Controller
         $m     = (int) explode('-', $month)[1];
         $type  = $request->input('type', 'monthly'); // advance or monthly
         
-        $employees = Employee::with('workSchedule')->get();
+        $employees = Employee::all();
         $count = 0;
-
-        // Limpa caches estáticos uma vez antes do lote (eficiência máxima)
-        \App\Services\CalendarService::clearCache();
-        \App\Models\HrConfig::clearCache();
 
         foreach ($employees as $employee) {
             $calculator->calculate($employee, $year, $m, true, $type);
@@ -85,6 +82,19 @@ class PayrollController extends Controller
         }
 
         $payroll->close();
+
+        // Notificar o funcionário que seu holerite está disponível
+        $payroll->load('employee.user');
+        if ($payroll->employee && $payroll->employee->user_id) {
+            $refMonth = \Carbon\Carbon::parse($payroll->reference_month . '-01')->translatedFormat('F/Y');
+            NotificationService::notify(
+                $payroll->employee->user_id,
+                '💰 Holerite Disponível',
+                'Seu contracheque de ' . $refMonth . ' está pronto para consulta.',
+                route('employee.payroll.index')
+            );
+        }
+
         return redirect()->back()->with('success', 'Folha fechada! Sem mais alterações por aqui.');
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Employee;
 use App\Models\MedicalCertificate;
 use App\Models\HrConfig;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -112,6 +113,16 @@ class MedicalCertificateController extends Controller
         // Recalcular banco de horas para remover descontos injustos nos dias de atestado
         $certificate->employee->recalculateHourBank();
 
+        // Notificar o funcionário sobre a aprovação
+        if ($certificate->employee->user_id) {
+            NotificationService::notify(
+                $certificate->employee->user_id,
+                '✅ Atestado Aprovado',
+                'Seu atestado de ' . $certificate->start_date->format('d/m/Y') . ' a ' . $certificate->end_date->format('d/m/Y') . ' foi aprovado pelo RH.',
+                route('employee.certificates.index')
+            );
+        }
+
         return redirect()->route('certificates.index')
             ->with('success', 'Pronto! Atestado validado e aprovado.');
     }
@@ -123,6 +134,16 @@ class MedicalCertificateController extends Controller
             'excused'  => false,
             'deducted' => true,
         ]);
+
+        // Notificar o funcionário sobre a recusa
+        if ($certificate->employee->user_id) {
+            NotificationService::notify(
+                $certificate->employee->user_id,
+                '❌ Atestado Recusado',
+                'Seu atestado de ' . $certificate->start_date->format('d/m/Y') . ' a ' . $certificate->end_date->format('d/m/Y') . ' foi recusado pelo RH.',
+                route('employee.certificates.index')
+            );
+        }
 
         return redirect()->route('certificates.index')
             ->with('success', 'Atestado recusado e status atualizado.');

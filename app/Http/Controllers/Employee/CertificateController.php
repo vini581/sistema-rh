@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\MedicalCertificate;
 use App\Models\HrConfig;
+use App\Services\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -95,6 +96,14 @@ class CertificateController extends Controller
             'excused'      => (bool) ($config->certificate_excuses_absence ?? true),
             'deducted'     => !(bool) ($config->certificate_excuses_absence ?? true),
         ]);
+
+        // Notificar todos os admins sobre o novo atestado
+        $employeeName = Auth::user()->name;
+        NotificationService::notifyAdmins(
+            '📋 Novo Atestado Médico',
+            $employeeName . ' enviou um atestado de ' . $start->format('d/m/Y') . ' a ' . $end->format('d/m/Y') . '.',
+            route('certificates.index')
+        );
 
         return redirect()->route('employee.certificates.index')
             ->with('success', 'Atestado enviado! Agora é só aguardar a análise do RH.');

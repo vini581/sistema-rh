@@ -30,14 +30,15 @@ O foco desse sistema é tirar o peso da burocracia das costas do RH e automatiza
 * **Autonomia Total (Fim das Regras Engessadas):** O sistema não te obriga mais a usar tabelas governamentais rígidas. Agora, o gestor pode configurar "Descontos Fixos %" diretamente no perfil, e a plataforma faz o corte automático no líquido. Você manda no cálculo.
 * **Gestão Inteligente de Faltas e DSR:** O motor agora varre todos os dias úteis. Se o funcionário não bateu ponto e não tem atestado/férias, o sistema lança automaticamente a Falta Injustificada como dedução. E o DSR agora é calculado matematicamente correto sobre as horas extras/normais considerando domingos e feriados.
 * **Folha Flexível (Vale x Fechamento):** Suporta dois tipos de fechamento de folha. Você pode rodar um **Adiantamento Quinzenal** limpo (ex: Vale de 40%) no dia 15, e o sistema guardará a informação para deduzir automaticamente no **Fechamento Mensal** no dia 30.
-* **Blindagem de Atestados x Férias:** Na hora de lançar um atestado, o backend bloqueia na hora se a data coincidir com Férias Aprovadas, impedindo brechas.
-* **Altíssima Performance (Sem N+1):** O motor de cálculo de Banco de Horas e Calendário usa *Cache em Memória RAM* e *Eager Loading*. Mesmo com centenas de funcionários, o processamento de horas e feriados é quase instantâneo.
+* **Altíssima Performance (Zero N+1):** O motor de cálculo de Banco de Horas e os Dashboards usam *Cache em Memória*, *Subqueries* e *Eager Loading* de nível Enterprise. Mesmo com milhares de registros, o painel carrega em milissegundos.
+* **Command Palette (Busca Global):** Pressione `Ctrl + K` (ou `Cmd + K`) em qualquer lugar para pesquisar rapidamente por funcionários, atestados ou holerites e pular direto para a tela desejada.
 
 ### Para os Funcionários
 
-* **Painel de Holerites:** Cada colaborador tem seu próprio login para listar todos os contracheques que já recebeu. Dá para ver detalhado o que é bônus, o que é hora extra e o que é desconto.
-* **Histórico de Ausências:** Dá para conferir os atestados que já foram entregues e ver quando serão as próximas férias programadas pelo RH.
-* **Perfil Próprio:** Uma área para conferir seus dados de contrato e trocar a própria foto de perfil para manter a conta atualizada.
+* **Autoatendimento de Perfil:** O próprio funcionário pode acessar a aba "Meu Perfil" e gerenciar dados complementares (RG, Estado Civil, Contato de Emergência, Endereço). Qualquer alteração notifica silenciosamente os gestores de RH.
+* **Painel de Holerites:** Cada colaborador tem seu próprio login para listar todos os contracheques que já recebeu de forma detalhada e transparente.
+* **Histórico de Ausências:** Conferência rápida dos atestados entregues e férias programadas pelo RH.
+* **Aparência Premium (Dark/Light Mode):** A interface foi 100% desenhada com inspiração no Next.js (Tailwind CSS moderno), suportando Modo Escuro fluido e componentes assíncronos via Laravel Livewire.
 
 ---
 
@@ -296,13 +297,13 @@ Para quem quiser dar uma olhada no código, a estrutura segue o padrão do Larav
 
 ## Próximos Passos (Roadmap)
 
-Algumas ideias e melhorias que estão no radar para o futuro do projeto:
+Algumas ideias e melhorias que estão no radar para escalar o sistema:
 
--  **Testes Automatizados:** Implementar testes com PestPHP, principalmente nas regras de cálculo da folha.
--  **Dashboard Gerencial:** Criar uma tela inicial com gráficos resumindo os custos do mês.
--  **Envio de Holerite por E-mail:** Rotina para disparar o PDF automaticamente quando a folha for fechada.
--  **Melhorar o Layout Mobile:** Dar um tapa no responsivo da área do funcionário para ficar 100% no celular.
--  **Logs de Auditoria:** Gravar o histórico de quem alterou salários ou cadastros para ter um controle melhor.
+- **Background Jobs (Filas):** Desacoplar o fechamento da folha de pagamento do Request principal usando Filas/Redis, permitindo fechar a folha de milhares de funcionários simultaneamente.
+- **Formulários Reativos (Livewire):** Converter as telas de cadastro para validar dados e buscar CEPs em tempo real enquanto o RH digita.
+- **Cofre Digital (Paperless):** Área no perfil do funcionário para upload e validação em nuvem de documentos físicos escaneados (PDF de RG, Comprovantes, CNH).
+- **Envio de Holerite por E-mail:** Rotina diária/mensal para disparar o PDF automaticamente quando a folha for fechada.
+- **Logs de Auditoria:** Gravar o histórico de quem alterou salários ou cadastros para ter um tracking imutável de Segurança da Informação.
 
 ---
 

@@ -27,13 +27,30 @@ class ProfileController extends Controller
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $user = $request->user();
-        $user->fill($request->validated());
 
-        if ($request->hasFile('avatar')) {
+        // Atualiza name e email
+        $user->fill($request->safe()->only(['name', 'email']));
+
+        // Remove avatar se solicitado
+        if ($request->input('remove_avatar') === '1') {
             if ($user->avatar) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+                $user->avatar = null;
             }
-            $user->avatar = $request->file('avatar')->store('avatars', 'public');
+        }
+
+        // Upload de novo avatar
+        if ($request->hasFile('avatar')) {
+            $file = $request->file('avatar');
+
+            // Validar que o arquivo é uma imagem real
+            if ($file->isValid()) {
+                // Remove avatar antigo do disco
+                if ($user->avatar) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+                }
+                $user->avatar = $file->store('avatars', 'public');
+            }
         }
 
         if ($user->isDirty('email')) {
@@ -41,6 +58,30 @@ class ProfileController extends Controller
         }
 
         $user->save();
+
+        if ($user->employee) {
+            $employeeData = $request->safe()->only([
+                'rg', 'birth_date', 'gender', 'marital_status', 
+                'phone', 'address', 'emergency_contact_name', 'emergency_contact_phone'
+            ]);
+            
+            // Verifica se algum dado do funcionário realmente mudou
+            $user->employee->fill($employeeData);
+            if ($user->employee->isDirty()) {
+                $user->employee->save();
+                
+                // Notifica os gestores de RH sobre a atualização
+                $admins = \App\Models\User::where('role', 'admin')->get();
+                foreach ($admins as $admin) {
+                    \App\Services\NotificationService::notify(
+                        $admin->id,
+                        '📝 Perfil Atualizado',
+                        "O funcionário {$user->name} atualizou seus dados de contato/endereço.",
+                        route('employees.show', $user->employee->id)
+                    );
+                }
+            }
+        }
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }

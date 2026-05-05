@@ -15,7 +15,7 @@ return new class extends Migration
     public function down(): void
     {
         if (DB::getDriverName() !== 'sqlite') {
-            DB::statement("ALTER TABLE payrolls MODIFY COLUMN period_type ENUM('monthly', 'biweekly_1', 'biweekly_2') DEFAULT 'monthly'");
+            DB::statement("ALTER TABLE payrolls MODIFY COLUMN period_type ENUM('monthly', 'biweekly', 'biweekly_1', 'biweekly_2') DEFAULT 'monthly'");
         }
     }
 };

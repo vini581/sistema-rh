@@ -24,6 +24,10 @@ class PayrollCalculator
      */
     public function calculate(Employee $employee, int $year, int $month, bool $persist = true, string $type = 'monthly'): Payroll
     {
+        // Limpa caches estáticos para garantir dados frescos
+        CalendarService::clearCache();
+        HrConfig::clearCache();
+
         $logic = function () use ($employee, $year, $month, $persist, $type) {
             try {
                 if ($persist) {
@@ -47,8 +51,10 @@ class PayrollCalculator
                     ->whereNotNull('total_minutes')
                     ->get();
 
-                // Dias úteis e expectativa de minutos (com config do funcionário)
-                $workingDays = CalendarService::getWorkingDaysCount($year, $month, $employee->id);
+                $totalMinutes = $logs->sum('total_minutes');
+
+                // Dias úteis e expectativa de minutos
+                $workingDays = CalendarService::getWorkingDaysCount($year, $month);
                 $expectedMinutes = $monthlyHours * 60;
                 $expectedPerDay  = $workingDays > 0 ? ($expectedMinutes / $workingDays) : 0;
 
@@ -279,8 +285,8 @@ class PayrollCalculator
             }
 
             // Interseção entre jornada e período noturno
-            $overlapStart = $start->copy()->max($nightStart);
-            $overlapEnd   = $end->copy()->min($nightEnd);
+            $overlapStart = $start->max($nightStart);
+            $overlapEnd   = $end->min($nightEnd);
 
             if ($overlapStart->lt($overlapEnd)) {
                 $total += $overlapStart->diffInMinutes($overlapEnd);
