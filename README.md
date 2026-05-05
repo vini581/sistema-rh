@@ -14,7 +14,9 @@
 
 ## O Projeto
 
-Sistema desenvolvido para simplificar a gestão de recursos humanos e automatizar o processamento de folha de pagamento. A arquitetura principal do projeto conta com um motor de regras versionado por data: o sistema registra alterações nas alíquotas e regras trabalhistas mantendo o histórico, o que garante a integridade de recálculos e de holerites antigos.
+O Sistema de RH foi desenvolvido para resolver um gargalo clássico: a burocracia de fechar a folha de pagamento todo mês sem depender de planilhas desorganizadas ou de softwares legados engessados. A ideia do projeto é dar controle total ao gestor, unindo uma interface limpa e moderna a um backend construído para não falhar. 
+
+O principal diferencial da arquitetura é o motor de regras versionado por data. Na prática, isso significa que você pode atualizar taxas de impostos, regras sindicais ou percentuais de hora extra a qualquer momento, e o sistema entende a linha do tempo. Isso garante que recalcular uma folha antiga sempre usará a matemática exata daquela época, sem corromper o histórico financeiro da empresa.
 
 ## Stack Utilizada
 
