@@ -73,6 +73,16 @@ Se você preferir rodar de forma nativa (com PHP e MySQL instalados no seu Windo
  
 O Docker cuida de todo o "trabalho sujo". No primeiro build, ele já instala o Composer, as dependências do Node, compila o CSS e o JS, gera a chave de segurança e até cria as tabelas do banco de dados com dados de teste.
 
+#### Passo 0: Pré-requisitos (Docker)
+
+Se você ainda não tem o Docker instalado, aqui está o caminho mais rápido:
+
+*   **Windows:** Baixe o [Docker Desktop](https://www.docker.com/products/docker-desktop/). Durante a instalação, ele vai pedir para ativar o WSL 2 — pode aceitar sem medo. Lembre de reiniciar o PC depois.
+*   **macOS:** Baixe o [Docker Desktop](https://www.docker.com/products/docker-desktop/) (escolha a versão correta se o seu chip for Intel ou Apple M1/M2/M3).
+*   **Linux (Ubuntu/Debian):** Rode o comando: `sudo apt update && sudo apt install docker.io docker-compose-plugin -y`. Depois, adicione seu usuário ao grupo do docker com `sudo usermod -aG docker $USER` para não precisar de `sudo` toda hora.
+
+---
+
 **1. Clone o repositório:**
 ```bash
 git clone https://github.com/vini581/sistema-rh.git
