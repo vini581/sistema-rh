@@ -79,13 +79,39 @@ Se você ainda não tem o Docker instalado, aqui está o caminho mais rápido:
 
 *   **Windows:** Baixe o [Docker Desktop](https://www.docker.com/products/docker-desktop/). Durante a instalação, ele vai pedir para ativar o WSL 2 — pode aceitar sem medo. Lembre de reiniciar o PC depois.
 *   **macOS:** Baixe o [Docker Desktop](https://www.docker.com/products/docker-desktop/) (escolha a versão correta se o seu chip for Intel ou Apple M1/M2/M3).
-*   **Linux (Ubuntu/Debian):** Rode o comando: `sudo apt update && sudo apt install docker.io docker-compose-plugin -y`. Depois, adicione seu usuário ao grupo do docker com `sudo usermod -aG docker $USER` para não precisar de `sudo` toda hora.
+*   **Linux (Ubuntu/Debian):** Execute os comandos abaixo para instalar o Docker Engine oficial (docker-ce) e o plugin Docker Compose:
 
----
+```bash
+# 1. Atualizar a lista de pacotes
+sudo apt update
+
+# 2. Instalar dependências
+sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
+
+# 3. Adicionar a chave GPG do Docker
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+# 4. Adicionar o repositório estável do Docker
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# 5. Atualizar a lista de pacotes novamente
+sudo apt update
+
+# 6. Instalar o Docker Engine e o Docker Compose Plugin
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+# 7. Adicionar seu usuário ao grupo docker (substitua $USER se necessário)
+sudo usermod -aG docker $USER
+
+# 8. Aplicar as mudanças de grupo no terminal atual
+newgrp docker
+```
 
 **1. Clone o repositório:**
 ```bash
 git clone https://github.com/vini581/sistema-rh.git
+```
+```bash
 cd sistema-rh
 ```
  
