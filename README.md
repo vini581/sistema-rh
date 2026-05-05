@@ -155,13 +155,14 @@ npm run dev
 - `/database/migrations`: Definição de schemas e foreign keys.
 - `/docker`: Configuração do Nginx, FPM e script de inicialização do container.
 
-## Roadmap
+## Roadmap de Evolução
 
-- **Filas (Background Jobs):** Mover o fechamento da folha e envio de e-mails para processamento assíncrono (Redis/RabbitMQ).
-- **Componentização com Livewire:** Refatorar formulários complexos para validação reativa e busca de CEP assíncrona.
-- **Cofre Digital de Documentos:** Integração de storage cloud (S3) para retenção segura de documentos de admissão.
-- **Logs de Auditoria:** Implementar event listeners para registrar mutações no salário base ou parâmetros do RH.
-- **Testes Automatizados:** Cobertura de testes de unidade e feature (PestPHP) para garantir a estabilidade do motor de cálculo.
+O projeto está em constante evolução. Abaixo estão as grandes frentes de desenvolvimento que planejei para elevar o sistema ao nível de uma solução de mercado completa:
+
+*   **Escalabilidade com Background Jobs (Filas):** Para suportar empresas com milhares de funcionários, o objetivo é migrar o processamento pesado da folha e o disparo de comunicações para o segundo plano (usando Redis/Horizon). Isso garante que o sistema nunca sofra com *timeouts*, processando grandes volumes de dados de forma assíncrona.
+*   **Módulo de Business Intelligence (BI):** Transformar dados em estratégia. O plano é construir um dashboard analítico avançado que mostre gráficos de evolução de custos, tendências de horas extras e indicadores de turnover (rotatividade), ajudando o RH a tomar decisões baseadas em números reais.
+*   **Cofre Digital (Gestão Paperless):** Implementar uma central de armazenamento seguro para documentos escaneados (RG, CPF, CNH, Comprovantes). Integrando com serviços de nuvem (AWS S3), a ideia é extinguir as pastas físicas e deixar toda a documentação oficial a um clique de distância.
+*   **Comunicação Inteligente e Integrações:** Automatizar o envio de holerites em PDF e avisos de férias diretamente para o e-mail ou WhatsApp do funcionário. Além disso, expor uma API RESTful para que o sistema consiga conversar com softwares contábeis ou de BI externos.
 
 ---
 
