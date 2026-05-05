@@ -65,51 +65,43 @@ O principal diferencial da arquitetura é o motor de regras versionado por data.
 
 ## Instalação e Configuração
  
-O ambiente padrão do projeto roda sobre Docker, simplificando as dependências.
+O projeto foi estruturado para rodar via **Docker**, que é a forma mais simples e rápida de subir o ambiente completo (PHP, MySQL, Nginx e dependências) sem precisar configurar nada na sua máquina local.
+
+Se você preferir rodar de forma nativa (com PHP e MySQL instalados no seu Windows/Mac/Linux), existe um guia para isso logo abaixo.
  
-### Via Docker
+### Instalação Recomendada (Docker)
  
-**1. Instale o Docker e o Docker Compose na sua máquina.**  
- 
-**2. Clone o repositório:**
- 
+O Docker cuida de todo o "trabalho sujo". No primeiro build, ele já instala o Composer, as dependências do Node, compila o CSS e o JS, gera a chave de segurança e até cria as tabelas do banco de dados com dados de teste.
+
+**1. Clone o repositório:**
 ```bash
 git clone https://github.com/vini581/sistema-rh.git
 cd sistema-rh
 ```
  
-**3. Suba os containers:**
- 
+**2. Suba os containers:**
+Na primeira vez, use o comando abaixo para construir as imagens (isso pode demorar alguns minutos dependendo da sua internet):
 ```bash
 docker compose up --build
 ```
  
-No primeiro build, o Composer e o NPM instalarão as dependências, e um *entrypoint script* criará a `APP_KEY`, rodará as *migrations* e populará o banco de dados.
+**3. Acesso:**
+Quando o terminal parar de rodar mensagens e mostrar que o banco está pronto, você já pode acessar:
+* **URL:** `http://localhost:8000`
+* **Usuário Admin:** `admin@gmail.com`
+* **Senha:** `654321`
 
-**4. Acesso Padrão:**
-Acesse `http://localhost:8000`
-- E-mail: `admin@gmail.com`
-- Senha: `654321`
- 
-### Comandos úteis (Docker)
- 
+---
+
+### Uso no Dia a Dia (Docker)
+
+Depois que você já fez a primeira instalação, não precisa mais do comando `--build`. Para ligar o sistema sempre que for trabalhar, basta rodar:
+
 ```bash
-# Rodar em background
-docker compose up --build -d
- 
-# Visualizar logs
-docker compose logs -f
- 
-# Derrubar os containers
-docker compose down
- 
-# Derrubar e resetar volumes (apaga o banco)
-docker compose down -v && docker compose up --build
- 
-# Rodar comandos do Artisan dentro do container
-docker compose exec app php artisan migrate:fresh --seed
+docker compose up -d
 ```
- 
+O `-d` serve para o terminal não ficar preso. Você roda o comando, fecha a janela e o sistema continua rodando no seu navegador. Para desligar tudo, use `docker compose down`.
+
 ---
  
 ### Instalação Manual (Sem Docker)
